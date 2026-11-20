@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DroidHand</string>
+    <string name="a11y_description">DroidHand drives the screen on behalf of an AI agent you control (snapshot the UI, tap, type, navigate). Enable only if you set DroidHand up yourself.</string>
+    <string name="notif_channel">DroidHand status</string>
+    <string name="notif_connected">Agent connected — tap to open, or Disconnect</string>
+</resources>
