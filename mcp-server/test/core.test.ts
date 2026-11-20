@@ -120,3 +120,17 @@ test("panic_disconnect severs the session", async () => {
     await phone.close().catch(() => undefined);
   });
 });
+
+test("toggling suggestion logging on the device takes effect without reconnecting", async () => {
+  const cfg = tmpCfg();
+  await withCore(cfg, async (core, url) => {
+    const phone = await startMockPhone({ url, token: cfg.token }); // starts OFF
+    const off = await core.callTool("suggest_feature", { title: "a", detail: "b" });
+    assert.equal(off.ok, false);
+    phone.sendEvent("device_info", { suggestionLogging: true });
+    await waitFor(() => core.relay.deviceInfo?.suggestionLogging === true);
+    const on = await core.callTool("suggest_feature", { title: "a", detail: "b" });
+    assert.equal(on.ok, true);
+    await phone.close();
+  });
+});

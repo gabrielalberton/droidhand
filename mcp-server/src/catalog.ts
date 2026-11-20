@@ -31,6 +31,8 @@ export const CATALOG: ToolDef[] = [
     input: { quality: z.number().min(1).max(100).optional() } },
   { name: "get_foreground_app", tier: "standard", confirm: false,
     description: "Package and activity currently in the foreground.", input: {} },
+  { name: "list_windows", tier: "standard", confirm: false,
+    description: "Windows on screen as the accessibility service sees them (type, layer, active/focused, package).", input: {} },
   { name: "get_notifications", tier: "standard", confirm: false,
     description: "List active notifications with refs and actions.",
     input: { package: z.string().optional() } },

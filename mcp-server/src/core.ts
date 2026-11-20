@@ -49,6 +49,9 @@ export class Core {
       case "get_audit_log":
         return { ok: true, data: { path: this.audit.path() } };
       case "panic_disconnect":
+        // Ask the phone to stop its agent service (stays off until the operator restarts
+        // it in the app), then sever the session regardless of the answer.
+        if (this.relay.connected) await this.relay.dispatch("panic", {}).catch(() => undefined);
         this.relay.disconnectPhone();
         this.audit.record({ kind: "safety", tool: name, ok: true });
         return { ok: true, data: { disconnected: true } };
@@ -82,7 +85,7 @@ export class Core {
       return {
         ok: false,
         error:
-          "Suggestion logging is OFF. Enable it in the DroidHand app (Settings → Feature suggestions); it is off by default.",
+          "Suggestion logging is OFF. The operator can enable it in the DroidHand app ('Allow the agent to log feature suggestions'); it is off by default.",
       };
     }
     const title = String(args.title ?? "").trim();

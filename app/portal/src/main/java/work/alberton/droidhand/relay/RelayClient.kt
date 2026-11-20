@@ -12,6 +12,7 @@ import okhttp3.WebSocketListener
 import org.json.JSONObject
 import work.alberton.droidhand.data.Prefs
 import work.alberton.droidhand.tools.ToolRouter
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /**
@@ -27,16 +28,31 @@ class RelayClient(context: Context) {
         .pingInterval(20, TimeUnit.SECONDS)
         .build()
 
+    /** Tools run one at a time, off the socket reader thread (gestures block until done). */
+    private val worker = Executors.newSingleThreadExecutor()
     private var ws: WebSocket? = null
     @Volatile private var running = false
 
     fun start() {
         running = true
+        current = this
         connect()
     }
 
+    /** Tell the relay about a device-side change (e.g. the suggestion toggle) without reconnecting. */
+    fun sendDeviceInfo() {
+        ws?.send(JSONObject().put("type", "event").put("event", "device_info").put("payload", deviceJson()).toString())
+    }
+
+    private fun deviceJson(): JSONObject = JSONObject()
+        .put("model", Build.MODEL)
+        .put("androidSdk", Build.VERSION.SDK_INT)
+        .put("appVersion", "0.1.0")
+        .put("suggestionLogging", prefs.suggestionLogging)
+
     fun stop() {
         running = false
+        if (current === this) current = null
         ws?.close(1000, "stop")
         ws = null
     }
@@ -49,11 +65,7 @@ class RelayClient(context: Context) {
 
     private val listener = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
-            val device = JSONObject()
-                .put("model", Build.MODEL)
-                .put("androidSdk", Build.VERSION.SDK_INT)
-                .put("appVersion", "0.1.0")
-                .put("suggestionLogging", prefs.suggestionLogging)
+            val device = deviceJson()
             val hello = JSONObject()
                 .put("type", "hello")
                 .put("token", prefs.token)
@@ -71,11 +83,17 @@ class RelayClient(context: Context) {
             val id = frame.optString("id")
             val tool = frame.optString("tool")
             val args = frame.optJSONObject("args") ?: JSONObject()
-            val res = router.run(tool, args)
-            val out = JSONObject().put("type", "result").put("id", id).put("ok", res.ok)
-            res.data?.let { out.put("data", it) }
-            res.error?.let { out.put("error", it) }
-            webSocket.send(out.toString())
+            worker.execute {
+                val res = router.run(tool, args)
+                val out = JSONObject().put("type", "result").put("id", id).put("ok", res.ok)
+                res.data?.let { out.put("data", it) }
+                res.error?.let { out.put("error", it) }
+                webSocket.send(out.toString())
+            }
+        }
+
+        override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+            webSocket.close(1000, null)
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) = scheduleReconnect()
@@ -85,5 +103,11 @@ class RelayClient(context: Context) {
     private fun scheduleReconnect() {
         if (!running) return
         Handler(Looper.getMainLooper()).postDelayed({ if (running) connect() }, 3000)
+    }
+
+    companion object {
+        @Volatile
+        var current: RelayClient? = null
+            private set
     }
 }

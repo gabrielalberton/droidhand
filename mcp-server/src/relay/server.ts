@@ -148,6 +148,10 @@ export class Relay {
       if (frame.ok) p.resolve(frame.data);
       else p.reject(new Error(frame.error ?? "device reported failure"));
     } else if (frame.type === "event") {
+      // The phone re-sends its device info when a device-side toggle changes.
+      if (frame.event === "device_info" && frame.payload && typeof frame.payload === "object") {
+        this.device = { ...(this.device ?? { suggestionLogging: false }), ...(frame.payload as DeviceInfo) };
+      }
       for (const h of this.eventHandlers) h(frame.event, frame.payload);
     } else if (frame.type === "ping") {
       this.phone?.send(JSON.stringify({ type: "pong" }));

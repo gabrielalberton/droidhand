@@ -13,6 +13,8 @@ export interface MockPhone {
   close(): Promise<void>;
   /** Suggestions the server forwarded to the device via store_suggestion. */
   storedSuggestions: unknown[];
+  /** Push an unsolicited event to the relay (e.g. device_info after a toggle). */
+  sendEvent(event: string, payload: unknown): void;
 }
 
 /**
@@ -69,6 +71,7 @@ export function startMockPhone(opts: MockPhoneOptions): Promise<MockPhone> {
         () =>
           resolve({
             storedSuggestions: stored,
+            sendEvent: (event: string, payload: unknown) => ws.send(JSON.stringify({ type: "event", event, payload })),
             close: () =>
               new Promise<void>((res) => {
                 ws.once("close", () => res());

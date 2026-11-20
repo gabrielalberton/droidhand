@@ -37,8 +37,8 @@ jobs:
           java-version: 17
       - name: Build Android app
         run: |
-          if [ -f app/build.gradle ] || [ -f app/build.gradle.kts ] || [ -f settings.gradle ] || [ -f settings.gradle.kts ]; then
-            ./gradlew :app:assembleDebug --no-daemon
+          if [ -f app/settings.gradle.kts ]; then
+            cd app && ./gradlew :portal:assembleDebug --no-daemon
           else
             echo "app not scaffolded yet — skipping"
           fi

@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationCompat
 import work.alberton.droidhand.DroidHandApp
 import work.alberton.droidhand.R
@@ -20,13 +21,14 @@ class RelayService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            work.alberton.droidhand.data.Prefs(this).serviceEnabled = false
             relay?.stop()
             relay = null
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
         }
-        startForeground(NOTIF_ID, buildNotification())
+        startForeground(NOTIF_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         if (relay == null) {
             relay = RelayClient(this).also { it.start() }
         }

@@ -30,6 +30,16 @@ async function main(): Promise<void> {
           }`,
         };
       }
+      // Screenshots come back as real MCP image content, not a base64 blob in text.
+      const img = res.data as { data?: unknown; mimeType?: unknown; width?: unknown; height?: unknown } | undefined;
+      if (res.ok && tool.name === "screen_capture" && typeof img?.data === "string") {
+        return {
+          content: [
+            { type: "image" as const, data: img.data, mimeType: String(img.mimeType ?? "image/jpeg") },
+            { type: "text" as const, text: JSON.stringify({ width: img.width, height: img.height }) },
+          ],
+        };
+      }
       return {
         content: [{ type: "text" as const, text: JSON.stringify(res.ok ? res.data : { error: res.error }, null, 2) }],
         isError: !res.ok,
