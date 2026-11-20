@@ -293,6 +293,15 @@ The project will not accept features whose primary purpose is defeating a device
 
 ---
 
+### 7.9 Feature-suggestion log (agent self-improvement, default OFF)
+
+While an agent uses the phone it can log ideas — new features, capabilities, harness, optimizations, routines — that would speed up future work. These accumulate for when the operator builds a new version; any fork inherits the same capability.
+
+- **Toggle lives in the app**, **OFF by default**. When OFF, `suggest_feature` is a no-op that returns a clear "enable it in the app" message. The device reports its toggle state to the relay on connect.
+- **Storage:** the app owns the on-device log (source of truth); the NUC keeps a readable mirror (`suggestions.jsonl`) so suggestions are easy to list and export. Nothing is auto-committed — `export_suggestions` renders a reviewable `SUGGESTIONS.md`.
+- **Tools:** `suggest_feature {title, detail, category, priority?, context?}`, `list_suggestions`, `export_suggestions`.
+- **Privacy:** suggestions may reference the operator's workflows, so they stay local (gitignored) until the operator chooses to share them.
+
 ## 8. ADB-on-demand mechanism (detailed)
 
 Mirrors Shizuku's non-root wireless start, but scoped to short, logged windows and driven by the agent rather than boot.

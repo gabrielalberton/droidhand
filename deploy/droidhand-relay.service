@@ -1,0 +1,23 @@
+[Unit]
+Description=DroidHand relay daemon (phone control plane)
+Documentation=https://github.com/__GH_OWNER__/droidhand
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Rendered by deploy/setup.sh (placeholders filled with real paths).
+ExecStart=__NODE__ __REPO__/mcp-server/dist/daemon.js
+Environment=DROIDHAND_RELAY_HOST=127.0.0.1
+Environment=DROIDHAND_RELAY_PORT=8787
+Environment=DROIDHAND_CONTROL_HOST=127.0.0.1
+Environment=DROIDHAND_CONTROL_PORT=8788
+Environment=DROIDHAND_TOKEN_FILE=__HOME__/.config/droidhand/token
+Restart=on-failure
+RestartSec=3
+# Long-running service: cap memory per host policy.
+MemoryMax=512M
+MemorySwapMax=256M
+
+[Install]
+WantedBy=default.target
