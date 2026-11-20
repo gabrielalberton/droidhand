@@ -14,6 +14,9 @@ export interface Config {
   auditDir: string;
   suggestionsDir: string;
   cmdTimeoutMs: number;
+  /** adb binary and (optional) device serial used by own_helper_start. */
+  adbPath: string;
+  adbSerial: string;
 }
 
 function stateDir(sub: string): string {
@@ -35,5 +38,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     auditDir: env.DROIDHAND_AUDIT_DIR ?? stateDir("audit"),
     suggestionsDir: env.DROIDHAND_SUGGESTIONS_DIR ?? stateDir("suggestions"),
     cmdTimeoutMs: Number(env.DROIDHAND_CMD_TIMEOUT_MS ?? "15000"),
+    adbPath: env.DROIDHAND_ADB ?? "adb",
+    adbSerial: env.DROIDHAND_ADB_SERIAL ?? "",
   };
 }

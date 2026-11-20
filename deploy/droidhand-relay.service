@@ -13,6 +13,7 @@ Environment=DROIDHAND_RELAY_PORT=8787
 Environment=DROIDHAND_CONTROL_HOST=127.0.0.1
 Environment=DROIDHAND_CONTROL_PORT=8788
 Environment=DROIDHAND_TOKEN_FILE=__HOME__/.config/droidhand/token
+Environment=DROIDHAND_ADB=__ADB__
 Restart=on-failure
 RestartSec=3
 # Long-running service: cap memory per host policy.

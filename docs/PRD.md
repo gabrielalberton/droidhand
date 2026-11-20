@@ -21,6 +21,7 @@
 | Version | Date | Author | Change |
 |---|---|---|---|
 | 0.1 | 2026-11-20 | maintainer | Initial complete draft |
+| 0.2 | 2026-11-20 | maintainer | §7.10 background display (two methods, measured limits on a Galaxy S24 Ultra / Android 17) |
 
 ### 0.2 Glossary
 
@@ -301,6 +302,28 @@ While an agent uses the phone it can log ideas — new features, capabilities, h
 - **Storage:** the app owns the on-device log (source of truth); the NUC keeps a readable mirror (`suggestions.jsonl`) so suggestions are easy to list and export. Nothing is auto-committed — `export_suggestions` renders a reviewable `SUGGESTIONS.md`.
 - **Tools:** `suggest_feature {title, detail, category, priority?, context?}`, `list_suggestions`, `export_suggestions`.
 - **Privacy:** suggestions may reference the operator's workflows, so they stay local (gitignored) until the operator chooses to share them.
+
+### 7.10 Background display ("work in the background" + mini window)
+
+The agent can drive apps on a second display while the operator keeps using the phone, watching it in a small floating window and stepping in when needed (captcha, login). The operator picks the method in the app — **native**, **own window**, or **let the agent decide** (default) — and the choice overrides what the agent asks for.
+
+| | Native (`overlay_display_devices`) | Own window (shell-helper trusted display) |
+|---|---|---|
+| Needs | WRITE_SECURE_SETTINGS only — **works with debugging OFF** | Shell helper started over ADB (`own_helper_start`); **debugging must stay ON** for the whole session (Android kills shell-user processes when it turns off — measured) |
+| Window | Drawn by the system (translucent, fixed look) | Ours: opacity setting (opaque by default), resizable from the corner, draggable |
+| Hide while the agent keeps working | ✗ | ✓ "Esconder" → eye bubble to bring it back; the display keeps rendering into an off-screen sink (a display with no surface turns OFF and its apps stop) |
+| Close | Drag our handle onto the X bubble; apps move behind the user's apps | Drag the title bar onto the X bubble; the display and its apps are destroyed |
+| Operator interaction | Through the system window | Touches injected into the display (INJECT_EVENTS), back button |
+| Panic | Red bubble stays pinned during any background session; panic closes the session and stops the agent |
+
+Tools: `bg_open {mode: auto|native|own}`, `bg_status`, `bg_hide`, `bg_show`, `bg_close`, `request_user_help {message}`, `own_helper_start`, `own_helper_stop`; every phone tool takes `display`.
+
+**Rejected alternatives (tested):**
+- *App-owned VirtualDisplay* (no ADB): Android only lets a normal app create an untrusted `PUBLIC|OWN_CONTENT_ONLY` display (TRUSTED, SECURE and mirroring are denied). Launching any other app there — even our own non-embedded activity — is a SecurityException. Launched through `adb shell am start --display N` it works, but the first time the app opens another activity (splash→main, Chrome→History) Android moves the whole task to the user's screen.
+- *Screenshot-fed window* (~3 fps via a11y screenshots): too slow, rate-limited.
+- *One UI pop-up (freeform) window* on the main display: needs no ADB and is native/resizable, but it shares the user's screen and input, an agent tap moves focus away from the user's app, and when minimized the app stops and disappears from accessibility.
+
+Other measured facts: on a background display the IME does not pop up on the user's screen; accessibility global actions (back/home) hit the main display, so keys go through the helper instead; trusted displays keep every activity of the app on the background display.
 
 ## 8. ADB-on-demand mechanism (detailed)
 

@@ -33,7 +33,19 @@ class PanicOverlay(private val service: AccessibilityService, private val onPani
         main.post {
             if (view == null) show()
             main.removeCallbacks(hideRunnable)
-            main.postDelayed(hideRunnable, IDLE_MS)
+            if (!pinned) main.postDelayed(hideRunnable, IDLE_MS)
+        }
+    }
+
+    @Volatile
+    private var pinned = false
+
+    /** Pinned = always visible (a background session is running), no idle auto-hide. */
+    fun setPinned(on: Boolean) {
+        pinned = on
+        main.post {
+            if (on) { main.removeCallbacks(hideRunnable); if (view == null) show() }
+            else main.postDelayed(hideRunnable, IDLE_MS)
         }
     }
 

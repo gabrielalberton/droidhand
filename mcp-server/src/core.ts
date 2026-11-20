@@ -3,6 +3,7 @@ import { Relay } from "./relay/server.js";
 import { Audit, redact } from "./audit.js";
 import { SuggestionStore } from "./suggestions.js";
 import { CATALOG_BY_NAME } from "./catalog.js";
+import { startShellHelper, stopShellHelper } from "./adb.js";
 
 export interface ToolResult {
   ok: boolean;
@@ -18,8 +19,10 @@ export class Core {
   readonly relay: Relay;
   readonly audit: Audit;
   readonly suggestions: SuggestionStore;
+  private readonly cfg: Config;
 
   constructor(cfg: Config) {
+    this.cfg = cfg;
     this.relay = new Relay(cfg.relayHost, cfg.relayPort, cfg.token, cfg.cmdTimeoutMs);
     this.audit = new Audit(cfg.auditDir);
     this.suggestions = new SuggestionStore(cfg.suggestionsDir);
@@ -48,6 +51,9 @@ export class Core {
         return { ok: true, data: this.suggestions.exportMarkdown() };
       case "get_audit_log":
         return { ok: true, data: { path: this.audit.path() } };
+      case "own_helper_start":
+      case "own_helper_stop":
+        return this.shellHelper(name);
       case "panic_disconnect":
         // Ask the phone to stop its agent service (stays off until the operator restarts
         // it in the app), then sever the session regardless of the answer.
@@ -70,6 +76,34 @@ export class Core {
       const data = await this.relay.dispatch(name, args);
       this.audit.record({ kind: "cmd", tool: name, ok: true });
       return { ok: true, data };
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      this.audit.record({ kind: "cmd", tool: name, ok: false, error });
+      return { ok: false, error };
+    }
+  }
+
+  /** Start/stop the phone's shell helper over ADB; on start, wait until the app sees it. */
+  private async shellHelper(name: string): Promise<ToolResult> {
+    try {
+      if (name === "own_helper_stop") {
+        await stopShellHelper(this.cfg.adbPath, this.cfg.adbSerial);
+        this.audit.record({ kind: "safety", tool: name, ok: true });
+        return { ok: true, data: { stopped: true } };
+      }
+      const { serial } = await startShellHelper(this.cfg.adbPath, this.cfg.adbSerial);
+      let status: unknown = null;
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 250));
+        if (!this.relay.connected) continue;
+        status = await this.relay.dispatch("bg_status", {}).catch(() => null);
+        if ((status as { ownAvailable?: boolean } | null)?.ownAvailable) break;
+      }
+      const ok = (status as { ownAvailable?: boolean } | null)?.ownAvailable === true;
+      this.audit.record({ kind: "cmd", tool: name, ok, serial });
+      return ok
+        ? { ok: true, data: { serial, ownAvailable: true } }
+        : { ok: false, error: "helper started but the app did not report it (is the agent service connected?)" };
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
       this.audit.record({ kind: "cmd", tool: name, ok: false, error });

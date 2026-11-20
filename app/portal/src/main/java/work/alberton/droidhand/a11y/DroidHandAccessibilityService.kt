@@ -35,9 +35,15 @@ class DroidHandAccessibilityService : AccessibilityService() {
     lateinit var panic: PanicOverlay
         private set
 
+    /** Background display session (native or own window). */
+    lateinit var bg: work.alberton.droidhand.bg.BackgroundSession
+        private set
+
     override fun onServiceConnected() {
         instance = this
         panic = PanicOverlay(this) { stopAgent() }
+        // While a background session exists the panic button stays on screen.
+        bg = work.alberton.droidhand.bg.BackgroundSession(this) { active -> panic.setPinned(active) }
         // The relay comes up with the accessibility service (also after reboots and
         // app updates), as long as the operator has not disconnected it.
         val prefs = work.alberton.droidhand.data.Prefs(this)
@@ -48,7 +54,8 @@ class DroidHandAccessibilityService : AccessibilityService() {
 
     /** Kill switch: stop the agent session now and keep it off until the operator restarts it. */
     fun stopAgent() {
-        if (::panic.isInitialized) panic.hide()
+        if (::bg.isInitialized) runCatching { bg.close("panic") }
+        if (::panic.isInitialized) { panic.setPinned(false); panic.hide() }
         work.alberton.droidhand.service.RelayService.stop(this)
         android.os.Handler(android.os.Looper.getMainLooper()).post {
             android.widget.Toast.makeText(this, "DroidHand: agent stopped", android.widget.Toast.LENGTH_SHORT).show()
@@ -56,6 +63,7 @@ class DroidHandAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        if (::bg.isInitialized) runCatching { bg.close("service destroyed") }
         if (::panic.isInitialized) panic.hide()
         if (instance === this) instance = null
         shotExecutor.shutdown()
@@ -164,7 +172,8 @@ class DroidHandAccessibilityService : AccessibilityService() {
     }
 
     fun typeText(text: String): Boolean {
-        val target = findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+        // On a background display never use the global focus: it may be the user's field.
+        val target = (if (displayId == Display.DEFAULT_DISPLAY) findFocus(AccessibilityNodeInfo.FOCUS_INPUT) else null)
             ?: targetRoot()?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
             ?: targetRoot()?.let { firstEditable(it) }?.also {
                 it.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
@@ -192,7 +201,16 @@ class DroidHandAccessibilityService : AccessibilityService() {
         return first
     }
 
+    /** "Enter" on the focused field (IME action: search/go/send/next). */
+    fun imeEnter(): Boolean {
+        val node = (if (displayId == Display.DEFAULT_DISPLAY) findFocus(AccessibilityNodeInfo.FOCUS_INPUT) else null)
+            ?: targetRoot()?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+            ?: return false
+        return node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id)
+    }
+
     fun globalKey(key: String): Boolean = when (key) {
+        "enter" -> imeEnter()
         "back" -> performGlobalAction(GLOBAL_ACTION_BACK)
         "home" -> performGlobalAction(GLOBAL_ACTION_HOME)
         "recents" -> performGlobalAction(GLOBAL_ACTION_RECENTS)

@@ -34,6 +34,9 @@ if [[ ! -f "${REPO}/mcp-server/dist/daemon.js" ]]; then
   ( cd "${REPO}/mcp-server" && npm ci --no-fund --no-audit && npm run build )
 fi
 
+# adb for own_helper_start (background own-window method). Override with ADB=/path/to/adb.
+ADB_BIN="${ADB:-$(command -v adb || echo "${HOME_DIR}/android-sdk/platform-tools/adb")}"
+
 # 3) Render and install the user service.
 UNIT_DIR="${HOME_DIR}/.config/systemd/user"
 mkdir -p "${UNIT_DIR}"
@@ -41,6 +44,7 @@ sed -e "s#__NODE__#${NODE}#g" \
     -e "s#__REPO__#${REPO}#g" \
     -e "s#__HOME__#${HOME_DIR}#g" \
     -e "s#__GH_OWNER__#${GH_OWNER}#g" \
+    -e "s#__ADB__#${ADB_BIN}#g" \
     "${REPO}/deploy/droidhand-relay.service" > "${UNIT_DIR}/droidhand-relay.service"
 
 systemctl --user daemon-reload

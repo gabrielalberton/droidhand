@@ -44,6 +44,12 @@
                 android:value="Keeps the operator's AI-agent control session (relay connection) alive while enabled; user-visible with a Disconnect action." />
         </service>
 
+        <!-- The shell helper (started over ADB) hands its binder here; shell/root callers only. -->
+        <provider
+            android:name=".shell.ShellBridgeProvider"
+            android:authorities="work.alberton.droidhand.shell"
+            android:exported="true" />
+
         <service
             android:name=".a11y.DroidHandAccessibilityService"
             android:exported="false"

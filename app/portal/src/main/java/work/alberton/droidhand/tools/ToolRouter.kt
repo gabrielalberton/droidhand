@@ -80,11 +80,15 @@ class ToolRouter(context: Context) {
                 ToolResult(ok, JSONObject().put("swiped", ok), if (ok) null else "gesture not completed")
             }
             "scroll" -> withService(svc) { s ->
-                val dm = app.resources.displayMetrics
-                val cx = dm.widthPixels / 2
-                val cy = dm.heightPixels / 2
-                val dy = dm.heightPixels / 3
-                val dx = dm.widthPixels / 3
+                val size = android.graphics.Point().also {
+                    app.getSystemService(android.hardware.display.DisplayManager::class.java)
+                        .getDisplay(s.displayId)?.getRealSize(it)
+                }
+                if (size.x == 0) { size.x = app.resources.displayMetrics.widthPixels; size.y = app.resources.displayMetrics.heightPixels }
+                val cx = size.x / 2
+                val cy = size.y / 2
+                val dy = size.y / 3
+                val dx = size.x / 3
                 val ok = when (args.getString("direction")) {
                     "down" -> s.swipe(cx, cy + dy, cx, cy - dy, 350)
                     "up" -> s.swipe(cx, cy - dy, cx, cy + dy, 350)
@@ -97,10 +101,32 @@ class ToolRouter(context: Context) {
             "type_text" -> withService(svc) { s ->
                 if (args.has("ref") || args.has("x")) point(s, args)?.let { s.tapAt(it[0], it[1]); Thread.sleep(250) }
                 val ok = s.typeText(args.getString("text"))
-                if (ok && args.optBoolean("submit", false)) Thread.sleep(100)
+                if (ok && args.optBoolean("submit", false)) { Thread.sleep(100); s.imeEnter() }
                 ToolResult(ok, JSONObject().put("typed", ok), if (ok) null else "no focused text field")
             }
-            "key_event" -> withService(svc) { ToolResult(it.globalKey(args.getString("key"))) }
+            "key_event" -> withService(svc) { s ->
+                val key = args.getString("key")
+                if (s.displayId != 0 && key != "enter") {
+                    // Global actions would hit the user's screen: inject into the background display instead.
+                    val code = KEYCODES[key] ?: return@withService ToolResult(false, error = "key $key not supported on a background display")
+                    if (s.bg.mode == work.alberton.droidhand.bg.BackgroundSession.Mode.OWN && s.displayId == s.bg.displayId)
+                        ToolResult(s.bg.key(code))
+                    else ToolResult(false, error = "keys other than enter need the own-window method on a background display; tap the app's own back button instead")
+                } else ToolResult(s.globalKey(key))
+            }
+
+            // ---- Background display (native or own window) ----
+            "bg_open" -> withService(svc) { s ->
+                ToolResult(true, s.bg.open(args.optString("mode", "auto"), args.optInt("width", 720),
+                    args.optInt("height", 1560), args.optInt("dpi", 320)))
+            }
+            "bg_close" -> withService(svc) { s -> s.bg.close("agent"); ToolResult(true, s.bg.status()) }
+            "bg_hide" -> withService(svc) { s ->
+                if (s.bg.hide()) ToolResult(true, s.bg.status()) else ToolResult(false, error = "only the own-window method can be hidden")
+            }
+            "bg_show" -> withService(svc) { s -> s.bg.show(); ToolResult(true, s.bg.status()) }
+            "bg_status" -> withService(svc) { s -> ToolResult(true, s.bg.status()) }
+            "request_user_help" -> withService(svc) { s -> ToolResult(true, s.bg.requestHelp(args.getString("message"))) }
             "global_action" -> withService(svc) {
                 val action = args.getString("action")
                 val key = if (action == "clear_all_notifications") "notifications" else action
@@ -122,6 +148,13 @@ class ToolRouter(context: Context) {
                     val size = android.graphics.Point().also { dm.getDisplay(display)?.getRealSize(it) }
                     val opts = android.app.ActivityOptions.makeBasic().setLaunchDisplayId(display)
                     if (size.x > 0) opts.setLaunchBounds(android.graphics.Rect(0, 0, size.x, size.y))
+                    app.startActivity(intent, opts.toBundle())
+                } else if (args.has("bounds")) {
+                    // One UI: launch bounds on the main display open the app as a pop-up (freeform) window.
+                    val b = args.getJSONArray("bounds")
+                    intent.addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                    val opts = android.app.ActivityOptions.makeBasic()
+                        .setLaunchBounds(android.graphics.Rect(b.getInt(0), b.getInt(1), b.getInt(2), b.getInt(3)))
                     app.startActivity(intent, opts.toBundle())
                 } else {
                     app.startActivity(intent)
@@ -224,10 +257,18 @@ class ToolRouter(context: Context) {
     ): ToolResult = svc?.let(block) ?: ToolResult(false, error = "accessibility service not enabled")
 
     companion object {
+
         /** Tools that act on the screen or device (they show the panic button). */
         val ACTING = setOf(
             "tap", "long_press", "swipe", "scroll", "type_text", "key_event", "global_action",
-            "go_home", "launch_app", "open_url", "set_setting",
+            "go_home", "launch_app", "open_url", "set_setting", "bg_open", "request_user_help",
+        )
+
+        val KEYCODES = mapOf(
+            "back" to android.view.KeyEvent.KEYCODE_BACK,
+            "home" to android.view.KeyEvent.KEYCODE_HOME,
+            "recents" to android.view.KeyEvent.KEYCODE_APP_SWITCH,
+            "enter" to android.view.KeyEvent.KEYCODE_ENTER,
         )
 
         val WRITABLE = setOf(

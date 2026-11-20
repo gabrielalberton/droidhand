@@ -58,14 +58,15 @@ export const CATALOG: ToolDef[] = [
     input: { text: z.string(), ref: ref.optional(), submit: z.boolean().optional() } },
   { name: "key_event", tier: "standard", confirm: false,
     description: "Press a hardware/navigation key.",
-    input: { key: z.enum(["back", "home", "recents", "volume_up", "volume_down", "power", "enter"]) } },
+    input: { key: z.enum(["back", "home", "recents", "notifications", "quick_settings", "enter"]) } },
   { name: "global_action", tier: "standard", confirm: false,
     description: "Perform a global accessibility action.",
     input: { action: z.enum(["notifications", "quick_settings", "clear_all_notifications", "screenshot", "lock_screen"]) } },
 
   // ---- App & navigation ----
   { name: "launch_app", tier: "standard", confirm: false,
-    description: "Launch an app by package name.", input: { package: z.string() } },
+    description: "Launch an app by package name (display=<id> for a background display; bounds=[l,t,r,b] px opens a One UI pop-up window on the main screen).",
+    input: { package: z.string(), bounds: z.array(z.number()).length(4).optional() } },
   { name: "open_url", tier: "standard", confirm: false,
     description: "Open a URL in the default browser.", input: { url: z.string().url() } },
   { name: "go_home", tier: "standard", confirm: false, description: "Go to the home screen.", input: {} },
@@ -96,6 +97,33 @@ export const CATALOG: ToolDef[] = [
   { name: "adb_session_end", tier: "privileged", confirm: false,
     description: "Close the ADB session and disable wireless debugging.", input: {} },
 
+  // ---- Background display: the agent works while the user keeps using the phone ----
+  { name: "bg_open", tier: "standard", confirm: false,
+    description:
+      "Open a background display and return its displayId; then pass display=<id> to launch_app, screen_snapshot, " +
+      "screen_capture, tap, swipe, scroll, type_text, key_event. mode: 'native' (system window, works with debugging OFF, " +
+      "cannot be hidden), 'own' (our window: hideable, resizable, user can interact; needs own_helper_start and debugging ON), " +
+      "'auto' (own if the helper runs, else native). The user's choice in the app overrides mode (see forcedByUser).",
+    input: { mode: z.enum(["auto", "native", "own"]).optional(), width: z.number().optional(),
+      height: z.number().optional(), dpi: z.number().optional() } },
+  { name: "bg_status", tier: "standard", confirm: false,
+    description: "Background display state: mode, displayId, hidden, helpPending, user's method choice, own helper availability.", input: {} },
+  { name: "bg_hide", tier: "standard", confirm: false,
+    description: "Hide the own-window background display (the agent keeps working; the user sees an eye bubble).", input: {} },
+  { name: "bg_show", tier: "standard", confirm: false, description: "Show the background window again.", input: {} },
+  { name: "bg_close", tier: "standard", confirm: false,
+    description: "Close the background display (own: its apps are closed; native: they move behind the user's apps).", input: {} },
+  { name: "request_user_help", tier: "standard", confirm: false,
+    description: "Ask the user to take over in the background window (e.g. captcha, login). Shows the window with the message; " +
+      "poll bg_status until helpPending is null (the user taps the message when done).",
+    input: { message: z.string() } },
+  { name: "own_helper_start", tier: "privileged", confirm: false, local: true,
+    description: "Start the shell helper over ADB from the NUC (needs USB/wireless debugging ON and the NUC paired). " +
+      "Enables the 'own' background-window method. The helper dies when debugging is turned off.",
+    input: {} },
+  { name: "own_helper_stop", tier: "standard", confirm: false, local: true,
+    description: "Stop the shell helper (closes own-window background displays).", input: {} },
+
   // ---- Feature suggestions (local, default-OFF on device) ----
   { name: "suggest_feature", tier: "standard", confirm: false, local: true,
     description:
@@ -119,6 +147,13 @@ export const CATALOG: ToolDef[] = [
   { name: "panic_disconnect", tier: "standard", confirm: false, local: true,
     description: "Immediately sever the phone session and any ADB session.", input: {} },
 ];
+
+// Every phone tool may target a background display (0 = the user's screen, default).
+for (const t of CATALOG) {
+  if (!t.local && !("display" in t.input)) {
+    t.input = { ...t.input, display: z.number().int().min(0).optional().describe("display id (0 = phone screen; bg_open id = background)") };
+  }
+}
 
 export const CATALOG_BY_NAME = new Map(CATALOG.map((t) => [t.name, t]));
 
