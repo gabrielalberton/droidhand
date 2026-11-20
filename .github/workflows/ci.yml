@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Scaffold CI: jobs are guarded so the pipeline is green before code lands,
+# and light up automatically once each component has a manifest.
+jobs:
+  mcp-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build & test MCP server
+        run: |
+          if [ -f mcp-server/package.json ]; then
+            cd mcp-server
+            npm ci
+            npm run build --if-present
+            npm test --if-present
+          else
+            echo "mcp-server not scaffolded yet — skipping"
+          fi
+
+  android-app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Build Android app
+        run: |
+          if [ -f app/build.gradle ] || [ -f app/build.gradle.kts ] || [ -f settings.gradle ] || [ -f settings.gradle.kts ]; then
+            ./gradlew :app:assembleDebug --no-daemon
+          else
+            echo "app not scaffolded yet — skipping"
+          fi
+
+  hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No secrets / PII placeholders
+        run: |
+          echo "Checking that obvious secrets are not committed..."
+          ! git grep -nE '(BEGIN (RSA|OPENSSH) PRIVATE KEY)' -- . || (echo "Private key committed!" && exit 1)
+          echo "OK"

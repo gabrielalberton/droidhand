@@ -1,0 +1,40 @@
+# === Secrets — NEVER commit ===
+*.token
+token
+*.key
+*.keystore
+*.jks
+adbkey*
+secrets/
+.config/droidhand/
+**/local.properties
+
+# === Node / MCP server ===
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+npm-debug.log*
+.env
+.env.*
+
+# === Android / Gradle ===
+.gradle/
+app/build/
+**/build/
+*.apk
+*.aab
+.idea/
+captures/
+.cxx/
+
+# === OS / editor ===
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# === Logs / audit (runtime) ===
+*.log
+audit/
+*.jsonl
