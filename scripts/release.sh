@@ -26,7 +26,7 @@ command -v systemd-run >/dev/null && CAP=(systemd-run --user --scope -q -p Memor
 echo "==> MCP server: typecheck, test, build, pack"
 ( cd mcp-server && npm ci --no-fund --no-audit && npm run typecheck && npm test && npm run build && npm run docs:tools -- --check )
 ( cd mcp-server && npm pack --silent --pack-destination "$OUT" >/dev/null )
-mv "$OUT"/droidhand-mcp-server-*.tgz "$OUT/droidhand-mcp-server-$VERSION.tgz"
+[[ -f "$OUT/droidhand-mcp-server-$VERSION.tgz" ]] || { echo "npm pack did not produce droidhand-mcp-server-$VERSION.tgz" >&2; exit 1; }
 
 echo "==> Android: unit tests + signed release"
 ( cd android && "${CAP[@]}" ./gradlew -q :app:testDebugUnitTest :app:assembleRelease )
