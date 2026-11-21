@@ -4,21 +4,22 @@ import type { ToolArea } from "./types.js";
 export const adb: ToolArea = {
   id: "adb",
   title: "ADB on demand",
-  summary: "Short-lived, user-confirmed ADB sessions for privileged work.",
+  summary: "Debugging stays off; short, time-limited ADB sessions for privileged work.",
   tools: [
-    { name: "adb_session_begin", tier: "privileged", confirm: true, planned: true,
-      description: "Enable wireless debugging and open a short-lived local ADB session. Auto-closes on TTL.",
-      input: { reason: z.string(), ttlSeconds: z.number().min(10).max(1800).optional() } },
-    { name: "adb_shell", tier: "privileged", confirm: true, planned: true,
-      description: "Run a shell command inside an open ADB session.",
-      input: { command: z.string() } },
-    { name: "adb_install", tier: "privileged", confirm: true, planned: true,
-      description: "Install an APK already present on the phone.",
-      input: { apkPath: z.string() } },
-    { name: "pm_grant", tier: "privileged", confirm: true, planned: true,
-      description: "Grant a runtime permission to a package.",
-      input: { package: z.string(), permission: z.string() } },
-    { name: "adb_session_end", tier: "privileged", confirm: false, planned: true,
-      description: "Close the ADB session and disable wireless debugging.", input: {} },
+    { name: "adb_session_begin", tier: "privileged", confirm: false, local: true,
+      description:
+        "Turn USB debugging on and connect this computer to the phone over the tailnet (works on mobile data). " +
+        "Debugging is OFF the rest of the time: open a session only when a task really needs adb (e.g. `pm grant`, " +
+        "`pm install`, `dumpsys`) and ALWAYS call adb_session_end as soon as you are done. Fallback only: the session " +
+        "closes by itself 10 minutes after your last tool call (each call renews it), so a lost connection never leaves " +
+        "debugging on. The phone shows a 'Turn ADB off' notification meanwhile. The first session after a reboot needs " +
+        "the phone on any Wi-Fi (error 'adb_not_armed' otherwise).",
+      input: { reason: z.string().describe("why adb is needed, shown in the audit log") } },
+    { name: "adb_shell", tier: "privileged", confirm: false, local: true,
+      description: "Run a shell command (as the adb shell user) in the open ADB session. Returns stdout, stderr and exitCode.",
+      input: { command: z.string(), timeoutSeconds: z.number().min(1).max(300).optional() } },
+    { name: "adb_session_end", tier: "standard", confirm: false, local: true,
+      description: "Close the ADB session and turn debugging off on the phone right away (also stops the own-window helper). " +
+        "Call it as soon as the adb work is done.", input: {} },
   ],
 };

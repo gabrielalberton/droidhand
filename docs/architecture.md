@@ -62,6 +62,7 @@ android/app/src/main/java/work/alberton/droidhand/
   shell/        ShellMain (own-window helper, runs as the shell user) · ShellBridge
   relay/        RelayClient (WebSocket, reconnect)
   service/      RelayService (foreground service + notification) · KillSwitchTile
+  adb/          AdbSession (debugging on for a session, off on end/idle/kill switch)
   data/         Prefs · SecretStore (PIN, AES-GCM key in Android Keystore)
   ui/           Compose app: home/, settings/, components/, theme/
 ```
@@ -87,6 +88,21 @@ The agent may only use a background display while you can see it: before every c
 
 What works with the screen locked or off — and what doesn't — is measured in [locked-screen-findings.md](locked-screen-findings.md).
 
+## ADB on demand
+
+Debugging is off. `adb_session_begin` (handled by the relay) asks the app to turn **USB debugging** on, then runs `adb connect <phone-tailnet-ip>:5555` — adbd listens on TCP when it was switched with `adb tcpip`, so this works on mobile data too.
+
+```
+agent ─ adb_session_begin ─► relay ─ adb_enable ─► app: adb_enabled=1, notification "Turn ADB off"
+                              relay ─ adb connect 100.x.y.z:5555 ─► adbd
+agent ─ adb_shell "pm grant …" ─► relay ─ adb -s … shell ─► adbd
+agent ─ adb_session_end ─► relay ─ adb_disable ─► app: adb_enabled=0 (developer options restored)
+```
+
+- **Fallback:** every agent tool call renews a 10-minute idle deadline, kept both by the relay and by the app itself, so a lost connection never leaves debugging on. Kill switches also turn it off.
+- **After a reboot** Android forgets the TCP port. The first session *arms* it: with the phone on any Wi-Fi, the app turns wireless debugging on and reports the ports listening on loopback; the relay connects to the wireless-debugging one (the computer must have been paired once), runs `adb tcpip 5555` and turns wireless debugging off again.
+- `own_helper_start` opens a session if none is open; the helper dies when it ends.
+
 ## Host side
 
 ```
@@ -103,4 +119,4 @@ State lives under `$XDG_STATE_HOME/droidhand/` (`audit/audit.jsonl`, `suggestion
 
 ## Design history
 
-[PRD.md](PRD.md) is the original design document. It describes the full vision, including parts that are not built yet (ADB-on-demand sessions from the phone, notification listener, on-device confirmation dialogs); the README and [tools.md](tools.md) describe what ships.
+[PRD.md](PRD.md) is the original design document. It describes the full vision, including parts that are not built yet (notification listener, on-device confirmation dialogs); the README and [tools.md](tools.md) describe what ships.

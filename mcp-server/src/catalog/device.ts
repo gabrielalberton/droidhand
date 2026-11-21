@@ -13,7 +13,7 @@ export const device: ToolArea = {
       input: { namespace: settingNamespace, key: z.string() } },
     { name: "set_setting", tier: "privileged", confirm: false,
       description: "Write a protected setting (requires WRITE_SECURE_SETTINGS on the phone). Only an allowlist is writable: " +
-        "global adb_enabled, adb_wifi_enabled, development_settings_enabled, stay_on_while_plugged_in and the three animation scales.",
+        "global stay_on_while_plugged_in and the three animation scales. Debugging is not writable: use adb_session_begin.",
       input: { namespace: settingNamespace, key: z.string(), value: z.string() } },
   ],
 };

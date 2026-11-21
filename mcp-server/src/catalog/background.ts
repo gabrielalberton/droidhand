@@ -10,7 +10,7 @@ export const background: ToolArea = {
       description:
         "Open a background display and return its displayId; then pass display=<id> to launch_app, screen_snapshot, " +
         "screen_capture, tap, swipe, scroll, type_text, key_event. mode: 'native' (system window, works with debugging OFF, " +
-        "cannot be hidden), 'own' (our window: hideable, resizable, user can interact; needs own_helper_start and debugging ON), " +
+        "cannot be hidden), 'own' (our window: hideable, resizable, user can interact; needs own_helper_start, i.e. an ADB session), " +
         "'auto' (own if the helper runs, else native). The user's choice in the app overrides mode (see forcedByUser). " +
         "Safety: work in the background only happens while the user can see it (stop button + window, eye bubble or handle). " +
         "If those cannot be shown, the session is closed and calls fail with 'indicators_not_visible' — do not retry in a loop.",
@@ -28,8 +28,9 @@ export const background: ToolArea = {
         "poll bg_status until helpPending is null (the user taps the message when done).",
       input: { message: z.string() } },
     { name: "own_helper_start", tier: "privileged", confirm: false, local: true,
-      description: "Start the shell helper over ADB from the NUC (needs USB/wireless debugging ON and the NUC paired). " +
-        "Enables the 'own' background-window method. The helper dies when debugging is turned off.",
+      description: "Start the shell helper over ADB (opens an ADB session if none is open; see adb_session_begin). " +
+        "Enables the 'own' background-window method. The helper dies when the ADB session ends (debugging off): " +
+        "call adb_session_end when the background task is done.",
       input: {} },
     { name: "own_helper_stop", tier: "standard", confirm: false, local: true,
       description: "Stop the shell helper (closes own-window background displays).", input: {} },

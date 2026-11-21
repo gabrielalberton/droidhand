@@ -4,6 +4,9 @@
 # updated, so this script re-enables it every time, appending to (never replacing)
 # the services already enabled.
 # Usage: deploy/install-phone.sh [adb-serial] [apk]
+# Optional: RELAY_URL=ws://<computer-tailnet-ip>:8787 also configures the app
+# (address + token from DROIDHAND_TOKEN_FILE, default ~/.config/droidhand/token)
+# and turns the agent service on, without touching the phone's screen.
 set -euo pipefail
 ADB="${ADB:-adb}"
 SERIAL="${1:-}"
@@ -18,6 +21,12 @@ A=("$ADB"); [[ -n "$SERIAL" ]] && A+=(-s "$SERIAL")
 "${A[@]}" install -r "$APK"
 "${A[@]}" shell pm grant "$PKG" android.permission.WRITE_SECURE_SETTINGS
 "${A[@]}" shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS || true
+if [[ -n "${RELAY_URL:-}" ]]; then
+  TOKEN_FILE="${DROIDHAND_TOKEN_FILE:-$HOME/.config/droidhand/token}"
+  "${A[@]}" shell am broadcast -n "$PKG/.service.ProvisionReceiver" \
+    --es relay "$RELAY_URL" --es token "$(tr -d '\n' < "$TOKEN_FILE")" --ez enable true >/dev/null
+  echo "Configured relay $RELAY_URL (token from $TOKEN_FILE)."
+fi
 # An update kills the bound service and Android marks it "crashed" (never rebound).
 # Remove it from the enabled list, then add it back, keeping the other services.
 cur="$("${A[@]}" shell settings get secure enabled_accessibility_services | tr -d '\r')"

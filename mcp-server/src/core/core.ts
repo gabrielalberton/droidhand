@@ -4,6 +4,7 @@ import { CATALOG_BY_NAME } from "../catalog.js";
 import { Audit, redact } from "./audit.js";
 import { SuggestionStore, isSuggestionCategory } from "./suggestions.js";
 import { startShellHelper, stopShellHelper } from "./adb.js";
+import { AdbSessions } from "./adbSession.js";
 
 /** Outcome of one tool call, as returned to the MCP adapter over the control channel. */
 export interface ToolResult {
@@ -35,6 +36,7 @@ export class Core {
   readonly relay: Relay;
   readonly audit: Audit;
   readonly suggestions: SuggestionStore;
+  readonly adb: AdbSessions;
   private readonly cfg: Config;
 
   constructor(cfg: Config) {
@@ -42,6 +44,8 @@ export class Core {
     this.relay = new Relay(cfg.relayHost, cfg.relayPort, cfg.token, cfg.cmdTimeoutMs);
     this.audit = new Audit(cfg.auditDir);
     this.suggestions = new SuggestionStore(cfg.suggestionsDir);
+    this.adb = new AdbSessions(cfg.adbPath, cfg.adbHost, (tool, args) => this.relay.dispatch(tool, args),
+      (why) => this.audit.record({ kind: "safety", tool: "adb_session_end", why }));
   }
 
   /** Start the phone-facing relay and audit every device event. */
@@ -51,6 +55,7 @@ export class Core {
   }
 
   async stop(): Promise<void> {
+    await this.adb.end("relay_stopped");
     await this.relay.stop();
   }
 
@@ -58,6 +63,8 @@ export class Core {
   async callTool(name: string, args: ToolArgs): Promise<ToolResult> {
     const def = CATALOG_BY_NAME.get(name);
     if (!def) return { ok: false, error: `unknown tool '${name}'` };
+    // Any agent activity keeps an open ADB session alive (idle fallback, see AdbSessions).
+    if (name !== "adb_session_end" && name !== "panic_disconnect") this.adb.touch();
 
     // Local handlers (never leave the host).
     switch (name) {
@@ -69,8 +76,15 @@ export class Core {
         return { ok: true, data: this.suggestions.exportMarkdown() };
       case "get_audit_log":
         return { ok: true, data: { path: this.audit.path() } };
+      case "adb_session_begin":
+        return this.beginAdb(args);
+      case "adb_shell":
+        return this.adbShell(args);
+      case "adb_session_end":
+        await this.adb.end("agent", true);
+        return { ok: true, data: { debugging: "off" } };
       case "own_helper_start":
-        return this.startHelper();
+        return this.startHelper(args);
       case "own_helper_stop":
         return this.stopHelper();
       case "panic_disconnect":
@@ -102,17 +116,51 @@ export class Core {
    * restarts it in the app), then sever the session regardless of the answer.
    */
   private async panic(): Promise<ToolResult> {
+    await this.adb.end("panic", true);
     if (this.relay.connected) await this.relay.dispatch("panic", {}).catch(() => undefined);
     this.relay.disconnectPhone();
     this.audit.record({ kind: "safety", tool: "panic_disconnect", ok: true });
     return { ok: true, data: { disconnected: true } };
   }
 
-  /** Start the phone's shell helper over adb, then wait until the app reports it. */
-  private async startHelper(): Promise<ToolResult> {
+  private async beginAdb(args: ToolArgs): Promise<ToolResult> {
+    const tool = "adb_session_begin";
+    const reason = String(args.reason ?? "");
+    try {
+      const info = await this.adb.begin();
+      this.audit.record({ kind: "cmd", tool, ok: true, reason, serial: info.serial, expiresAt: info.expiresAt, armed: info.armed });
+      return { ok: true, data: info };
+    } catch (err) {
+      const error = errorMessage(err);
+      this.audit.record({ kind: "cmd", tool, ok: false, reason, error });
+      return { ok: false, error };
+    }
+  }
+
+  private async adbShell(args: ToolArgs): Promise<ToolResult> {
+    const tool = "adb_shell";
+    const command = String(args.command ?? "");
+    this.audit.record({ kind: "cmd", tool, tier: "privileged", args: redact({ command }), phase: "request" });
+    try {
+      const secs = typeof args.timeoutSeconds === "number" ? args.timeoutSeconds : 30;
+      const out = await this.adb.shell(command, secs * 1000);
+      const cap = (t: string) => (t.length > 65536 ? t.slice(0, 65536) + "\n…(truncated)" : t);
+      this.audit.record({ kind: "cmd", tool, ok: out.exitCode === 0, exitCode: out.exitCode });
+      return { ok: true, data: { stdout: cap(out.stdout), stderr: cap(out.stderr), exitCode: out.exitCode } };
+    } catch (err) {
+      const error = errorMessage(err);
+      this.audit.record({ kind: "cmd", tool, ok: false, error });
+      return { ok: false, error };
+    }
+  }
+
+  /** Start the phone's shell helper over adb (opening an ADB session if needed), then wait until the app reports it. */
+  private async startHelper(args: ToolArgs): Promise<ToolResult> {
     const tool = "own_helper_start";
     try {
-      const { serial } = await startShellHelper(this.cfg.adbPath, this.cfg.adbSerial);
+      const serial = this.cfg.adbSerial || (this.adb.current
+        ?? await this.adb.begin()).serial;
+      await startShellHelper(this.cfg.adbPath, serial);
       let available = false;
       for (let i = 0; i < HELPER_POLL_ATTEMPTS && !available; i++) {
         await new Promise((r) => setTimeout(r, HELPER_POLL_INTERVAL_MS));
@@ -133,7 +181,8 @@ export class Core {
   private async stopHelper(): Promise<ToolResult> {
     const tool = "own_helper_stop";
     try {
-      await stopShellHelper(this.cfg.adbPath, this.cfg.adbSerial);
+      const serial = this.cfg.adbSerial || this.adb.current?.serial;
+      if (serial) await stopShellHelper(this.cfg.adbPath, serial);
       this.audit.record({ kind: "safety", tool, ok: true });
       return { ok: true, data: { stopped: true } };
     } catch (err) {

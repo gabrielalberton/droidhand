@@ -93,10 +93,10 @@ class SystemTools(context: Context) : ToolGroup {
     private fun canWriteSecure(app: Context): Boolean =
         app.checkSelfPermission("android.permission.WRITE_SECURE_SETTINGS") == PackageManager.PERMISSION_GRANTED
 
-    /** Writes are limited to [ToolPolicy.WRITABLE] (debugging and animation keys). */
+    /** Writes are limited to [ToolPolicy.WRITABLE] (stay-awake and animation keys; debugging only via ADB sessions). */
     private fun setSetting(app: Context, ns: String, key: String, value: String): ToolResult {
         if ("$ns/$key" !in ToolPolicy.WRITABLE) {
-            return ToolResult.fail("set_setting allowlist (P1): ${ToolPolicy.WRITABLE.joinToString()}")
+            return ToolResult.fail("set_setting allowlist: ${ToolPolicy.WRITABLE.joinToString()} (debugging: use adb_session_begin)")
         }
         if (!canWriteSecure(app)) {
             return ToolResult.fail("WRITE_SECURE_SETTINGS not granted (adb shell pm grant ${app.packageName} android.permission.WRITE_SECURE_SETTINGS)")

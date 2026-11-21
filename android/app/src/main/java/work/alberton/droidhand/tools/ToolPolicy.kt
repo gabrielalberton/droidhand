@@ -21,11 +21,11 @@ object ToolPolicy {
         "go_home", "launch_app", "open_url",
     )
 
-    /** Settings an agent may write (debugging and animation keys only). */
+    /**
+     * Settings an agent may write (stay-awake and animation keys). Debugging is not
+     * here on purpose: it is only turned on through a time-limited ADB session (AdbSession).
+     */
     val WRITABLE = setOf(
-        "global/adb_enabled",
-        "global/adb_wifi_enabled",
-        "global/development_settings_enabled",
         "global/stay_on_while_plugged_in",
         "global/window_animation_scale",
         "global/transition_animation_scale",

@@ -20,8 +20,15 @@ class RelayService : Service() {
     private var relay: RelayClient? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        work.alberton.droidhand.adb.AdbSession.sweep(this)
+        if (intent?.action == ACTION_ADB_OFF) {
+            work.alberton.droidhand.adb.AdbSession.disable(this, "user")
+            if (relay == null) stopSelf()
+            return if (relay == null) START_NOT_STICKY else START_STICKY
+        }
         if (intent?.action == ACTION_STOP) {
             work.alberton.droidhand.data.Prefs(this).serviceEnabled = false
+            work.alberton.droidhand.adb.AdbSession.disable(this, "kill_switch")
             // Same effect from every kill switch (notification, tile, panic): nothing of the agent stays on screen.
             work.alberton.droidhand.a11y.DroidHandAccessibilityService.instance?.clearAgentUi()
             relay?.stop()
@@ -75,6 +82,7 @@ class RelayService : Service() {
         const val NOTIF_ID = 1001
         const val ACTION_STOP = "work.alberton.droidhand.STOP"
         const val ACTION_RESTART = "work.alberton.droidhand.RESTART"
+        const val ACTION_ADB_OFF = "work.alberton.droidhand.ADB_OFF"
 
         fun start(context: Context) {
             context.startForegroundService(Intent(context, RelayService::class.java))

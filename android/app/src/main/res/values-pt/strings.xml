@@ -4,6 +4,9 @@
     <string name="notif_channel">Status do DroidHand</string>
     <string name="notif_connected">Agente conectado — toque para abrir ou Desconectar</string>
     <string name="notif_disconnect">Desconectar</string>
+    <string name="adb_notif_title">ADB ligado para o agente</string>
+    <string name="adb_notif_text">O agente desliga ao terminar; no máximo às %1$s</string>
+    <string name="adb_notif_off">Desligar ADB</string>
 
     <string name="tagline">Seu celular, nas mãos do seu agente.</string>
     <string name="status_off">Desligado</string>
@@ -35,7 +38,7 @@
     <string name="perm_battery">Bateria sem restrição</string>
     <string name="perm_battery_desc">Mantém a conexão com a tela apagada.</string>
     <string name="perm_secure">Configurações seguras</string>
-    <string name="perm_secure_desc">Janela de fundo nativa e os ajustes de depuração que o agente pode mudar.</string>
+    <string name="perm_secure_desc">Janela de fundo nativa e ligar a depuração só em sessões curtas de ADB.</string>
     <string name="perm_secure_how">Conceda uma vez pelo computador:</string>
     <string name="action_enable">Ativar</string>
     <string name="action_allow">Permitir</string>

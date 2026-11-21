@@ -17,6 +17,7 @@ export function tmpConfig(overrides: Partial<Config> = {}): Config {
     cmdTimeoutMs: 3000,
     adbPath: "adb",
     adbSerial: "",
+    adbHost: "",
     ...overrides,
   };
 }

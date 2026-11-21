@@ -61,7 +61,7 @@ Check it: `systemctl --user status droidhand-relay`.
      adb shell pm grant work.alberton.droidhand android.permission.WRITE_SECURE_SETTINGS
      ```
 
-     Needed for the native background window and for the agent to toggle debugging/animation settings.
+     Needed for the native background window and for ADB on demand (the app turns debugging on and off).
 
 When the status card says **Connected**, the phone side is done.
 
@@ -92,12 +92,21 @@ Try it: *"What's on my phone's screen?"* — the agent calls `screen_snapshot`. 
 
 ## 4. Optional
 
+### ADB on demand
+
+Some tasks need adb (granting a permission, installing an APK, `dumpsys`). DroidHand keeps debugging **off** and lets the agent turn it on for a session (`adb_session_begin` … `adb_session_end`). One-time setup:
+
+1. Install adb on the computer.
+2. On the phone: *Developer options → Wireless debugging → Pair device with pairing code*, then on the computer `adb pair <ip:port>` and type the code. Turn wireless debugging off again.
+
+That is all: the first session after each reboot arms the connection by itself (the phone must be on a Wi-Fi network for that one session); later sessions work on mobile data over the tailnet. While a session is open the phone shows **ADB is on for the agent** with a *Turn ADB off* button.
+
 ### Background window, own-window method
 
 The native method works out of the box (with the secure-settings grant). The **own window** method — hideable, resizable, works while the phone is locked — needs the computer to reach the phone over adb:
 
-1. On the phone: *Developer options → Wireless debugging* → on, and pair the computer once (`adb pair <ip:port>` with the pairing code).
-2. The agent calls `own_helper_start`; the relay starts the helper over adb. It keeps running until debugging is turned off.
+1. Set up [ADB on demand](#adb-on-demand) (pair once).
+2. The agent calls `own_helper_start`; the relay opens an ADB session and starts the helper. It runs until the session ends.
 
 In the app, **Background window** shows which method the agent may use and the helper status.
 
@@ -127,6 +136,7 @@ The small red **Stop** button only cancels the current action; the agent is told
 
 ## Updating
 
+- **Install over adb, no screen needed:** `RELAY_URL=ws://<computer-tailnet-ip>:8787 deploy/install-phone.sh` installs, grants, enables accessibility and configures the address and token.
 - **App:** install the newer APK over the old one (same signing key — no data is lost). Android turns accessibility services off on update; `deploy/install-phone.sh` re-enables it when you install over adb.
 - **Relay:** `git pull && cd mcp-server && npm ci && npm run build && systemctl --user restart droidhand-relay`.
 
@@ -140,7 +150,8 @@ The small red **Stop** button only cancels the current action; the agent is told
 | `awaiting_user` / `user_declined` | You were using the phone; answer the prompt, or let the agent use `bg_open`. |
 | `stopped_by_user` | You tapped Stop. The agent should check with you before continuing. |
 | `indicators_not_visible` | The background window's controls could not be drawn, so the session was closed. Re-open it; if it repeats, restart the accessibility service. |
-| `own_helper_start` fails | Wireless debugging is off or the computer is not paired (`adb devices` must list the phone). |
+| `adb_not_armed` | First ADB session since the phone rebooted, and the phone is not on Wi-Fi. Connect it to any Wi-Fi once. |
+| `adb_session_begin` / `own_helper_start` fails otherwise | The computer is not paired with the phone (see [ADB on demand](#adb-on-demand)), or it cannot reach the phone's tailnet address. |
 | Disconnects with the screen off | Allow unrestricted battery; on Samsung add DroidHand to *Never sleeping apps*. |
 
 Logs: the relay's audit log is `~/.local/state/droidhand/audit/audit.jsonl`; the service log is `journalctl --user -u droidhand-relay`.

@@ -27,8 +27,8 @@ Whoever holds the **token** and can reach the **relay** controls the phone as if
 - **Stop button.** A small red button floats while the agent acts; one tap cancels the current action and the agent is told (`stopped_by_user`).
 - **No invisible background work.** The agent may only use a background display while its controls (Stop + window, eye bubble or handle) are actually on screen; otherwise the session is closed (`indicators_not_visible`).
 - **Kill switches.** The notification's *Disconnect*, the Quick Settings tile and `panic_disconnect` end the session and close the background window at once.
-- **Limited settings writes.** `set_setting` can only change an allowlist of debugging and animation keys.
-- **Debugging off by default.** Everything works with USB/wireless debugging off except the optional own-window background method, whose helper needs wireless debugging while it runs.
+- **Limited settings writes.** `set_setting` can only change the stay-awake and animation keys; it cannot turn debugging on.
+- **Debugging off, ADB only on demand.** Everything works with USB/wireless debugging off. When a task needs adb (or the own-window helper), the agent opens a session: USB debugging goes on, the phone shows a *Turn ADB off* notification, and it goes off when the agent ends the session, 10 minutes after the agent's last call (enforced by the phone itself), or from any kill switch. While a session is open adbd also listens on TCP 5555 on every network the phone is on; only computers you have authorized (`adb pair` / *Allow debugging*) can connect.
 - **Optional PIN unlock, off by default.** The PIN is encrypted with an AES-GCM key in Android Keystore and never leaves the phone; saving or showing it requires your biometric/device credential; one wrong attempt disables the feature.
 - **Audit log.** Every tool call is appended to `audit.jsonl` on your computer, with secrets masked.
 - **No telemetry, no cloud.** Nothing is sent anywhere except between your phone and your relay.
@@ -39,6 +39,7 @@ Whoever holds the **token** and can reach the **relay** controls the phone as if
 - An agent you told to do something harmful, or one manipulated by what it reads on screen. Keep *Ask before using the main screen* on, watch the phone, and use Stop.
 - Someone holding your unlocked phone. With PIN unlock enabled, also someone who controls the agent while the phone is locked.
 - The own-window background display works **while the phone is locked** by design. If you enable the own-window helper, treat the relay as able to use apps without your PIN.
+- An open ADB session gives the relay's computer shell-level access to the phone. Never tap *Allow* on a debugging prompt you do not recognize.
 
 ## Out of scope
 

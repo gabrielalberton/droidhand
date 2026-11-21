@@ -25,10 +25,10 @@ Version: `versionName` / `versionCode` in `app/build.gradle.kts` (keep in sync w
 ../deploy/install-phone.sh [serial] [apk]
 ```
 
-Installs (release build if present, else debug), grants `WRITE_SECURE_SETTINGS` and notifications, and re-enables the accessibility service — Android turns it off on every update.
+Installs (release build if present, else debug), grants `WRITE_SECURE_SETTINGS` and notifications, and re-enables the accessibility service — Android turns it off on every update. With `RELAY_URL=ws://…:8787` it also sets the relay address and token through `ProvisionReceiver` (only senders holding `WRITE_SECURE_SETTINGS`, i.e. the adb shell, can reach it).
 
 ## Shell helper
 
 `shell/ShellMain` is not part of the app process: the relay starts it with
 `adb shell CLASSPATH=<apk> app_process /system/bin work.alberton.droidhand.shell.ShellMain`.
-Running as the shell user, it creates the trusted virtual display for the own-window background method and injects input into it; it talks to the app over the `IShellHelper` binder. R8 keeps it unrenamed (`proguard-rules.pro`).
+Running as the shell user (started over an ADB session), it creates the trusted virtual display for the own-window background method and injects input into it; it talks to the app over the `IShellHelper` binder. R8 keeps it unrenamed (`proguard-rules.pro`).

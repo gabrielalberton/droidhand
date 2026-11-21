@@ -29,7 +29,8 @@ test("MCP server boots over stdio and exposes the tool catalog", async () => {
     assert.ok(names.includes("tap"), "tap tool present");
     assert.ok(names.includes("suggest_feature"), "suggest_feature tool present");
     assert.ok(names.includes("bg_open"), "bg_open tool present");
-    assert.ok(!names.includes("adb_session_begin"), "planned tools are not offered");
+    assert.ok(!names.includes("get_notifications"), "planned tools are not offered");
+    assert.ok(names.includes("adb_session_begin"), "ADB sessions offered");
     assert.equal(tools.length, CATALOG.length, "every catalog tool is registered");
 
     // With no relay daemon running, a forwarded tool degrades gracefully (non-fatal error).

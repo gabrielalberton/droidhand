@@ -16,7 +16,7 @@ import work.alberton.droidhand.data.Prefs
 class ToolRouter(context: Context) {
     private val app = context.applicationContext
     private val prefs = Prefs(app)
-    private val groups: List<ToolGroup> = listOf(SystemTools(app), ScreenTools(), AppTools(), BackgroundTools())
+    private val groups: List<ToolGroup> = listOf(SystemTools(app), ScreenTools(), AppTools(), BackgroundTools(), AdbTools())
 
     fun run(tool: String, args: JSONObject): ToolResult {
         val svc = DroidHandAccessibilityService.instance

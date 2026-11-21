@@ -13,18 +13,19 @@ const EXPECTED_TOOLS = [
   "launch_app", "open_url", "go_home",
   "get_device_info", "get_setting", "set_setting",
   "get_lock_state", "unlock_device",
+  "adb_session_begin", "adb_shell", "adb_session_end",
   "bg_open", "bg_status", "bg_hide", "bg_show", "bg_close", "request_user_help", "own_helper_start", "own_helper_stop",
   "suggest_feature", "list_suggestions", "export_suggestions",
   "get_audit_log", "panic_disconnect",
 ];
 
 const LOCAL_TOOLS = [
-  "own_helper_start", "own_helper_stop", "suggest_feature", "list_suggestions", "export_suggestions",
+  "adb_session_begin", "adb_shell", "adb_session_end", "own_helper_start", "own_helper_stop", "suggest_feature", "list_suggestions", "export_suggestions",
   "get_audit_log", "panic_disconnect",
 ];
 
 /** Designed, not implemented in the app yet: must not be offered to agents. */
-const PLANNED = ["get_notifications", "adb_session_begin", "adb_shell", "adb_install", "pm_grant", "adb_session_end"];
+const PLANNED = ["get_notifications"];
 
 test("catalog has exactly the expected tools, in order", () => {
   assert.deepEqual(CATALOG.map((t) => t.name), EXPECTED_TOOLS);
@@ -83,13 +84,18 @@ test("areas partition the catalog and have unique ids", () => {
   assert.deepEqual(CATALOG_AREAS.flatMap((a) => a.tools), [...CATALOG]);
 });
 
-test("planned ADB actions are privileged and designed to require on-device confirmation", () => {
-  for (const name of ["adb_session_begin", "adb_shell", "adb_install", "pm_grant"]) {
-    const t = PLANNED_TOOLS.find((p) => p.name === name);
+test("ADB sessions are privileged, host-side and time-limited", () => {
+  for (const name of ["adb_session_begin", "adb_shell"]) {
+    const t = CATALOG_BY_NAME.get(name);
     assert.ok(t, name);
     assert.equal(t.tier, "privileged");
-    assert.equal(t.confirm, true, `${name} must require confirmation`);
+    assert.equal(t.local, true);
   }
+  assert.match(CATALOG_BY_NAME.get("adb_session_begin")!.description, /OFF the rest of the time/);
+});
+
+test("set_setting cannot turn debugging on", () => {
+  assert.doesNotMatch(CATALOG_BY_NAME.get("set_setting")!.description, /adb_enabled|adb_wifi_enabled/);
 });
 
 test("set_setting is privileged and documents its allowlist", () => {

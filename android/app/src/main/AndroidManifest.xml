@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- ADB sessions: is the phone on Wi-Fi (needed to arm the adb TCP port after a reboot) -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -64,6 +66,12 @@
 
         <!-- The shell helper (started over ADB) hands its binder here; shell/root callers only. -->
         <!-- Quick Settings kill switch -->
+        <!-- adb-only configuration (relay address, token, settings): the sender must hold WRITE_SECURE_SETTINGS. -->
+        <receiver
+            android:name=".service.ProvisionReceiver"
+            android:exported="true"
+            android:permission="android.permission.WRITE_SECURE_SETTINGS" />
+
         <service
             android:name=".service.KillSwitchTile"
             android:exported="true"

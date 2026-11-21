@@ -21,9 +21,11 @@ export interface Config {
   suggestionsDir: string;
   /** How long the relay waits for the phone to answer a command. */
   cmdTimeoutMs: number;
-  /** adb binary and (optional) device serial used by own_helper_start. */
+  /** adb binary; optional fixed serial for own_helper_* (bypasses ADB sessions, e.g. USB). */
   adbPath: string;
   adbSerial: string;
+  /** Phone address for ADB sessions; empty = the tailnet/Wi-Fi address the phone reports. */
+  adbHost: string;
 }
 
 function stateDir(sub: string): string {
@@ -51,5 +53,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     cmdTimeoutMs: Number(env.DROIDHAND_CMD_TIMEOUT_MS ?? "15000"),
     adbPath: env.DROIDHAND_ADB ?? "adb",
     adbSerial: env.DROIDHAND_ADB_SERIAL ?? "",
+    adbHost: env.DROIDHAND_ADB_HOST ?? "",
   };
 }

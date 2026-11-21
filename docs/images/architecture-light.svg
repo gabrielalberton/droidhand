@@ -61,7 +61,7 @@
 <rect x="312" y="194" width="40" height="40" rx="11" fill="#4F5BD5" fill-opacity=".14"/>
 <g transform="translate(320,202) scale(1.0)"><path d="M9 2v5M15 2v5M6 7h12v4a6 6 0 0 1-12 0zM12 17v5" fill="none" stroke="#4F5BD5" stroke-width="2.00" stroke-linecap="round" stroke-linejoin="round"/></g>
 <text x="312" y="264" font-size="17" font-weight="700" fill="#151839">MCP adapter</text>
-<text x="312" y="292" font-size="13.5" font-weight="400" fill="#4E5478" text-anchor="start">stdio, one per session</text><text x="312" y="313" font-size="13.5" font-weight="400" fill="#4E5478" text-anchor="start">33 tools: snapshot,</text><text x="312" y="334" font-size="13.5" font-weight="400" fill="#4E5478" text-anchor="start">tap, type, swipe,</text><text x="312" y="355" font-size="13.5" font-weight="400" fill="#4E5478" text-anchor="start">background display…</text>
+<text x="312" y="292" font-size="13.5" font-weight="400" fill="#4E5478" text-anchor="start">stdio, one per session</text><text x="312" y="313" font-size="13.5" font-weight="400" fill="#4E5478" text-anchor="start">36 tools: snapshot,</text><text x="312" y="334" font-size="13.5" font-weight="400" fill="#4E5478" text-anchor="start">tap, type, swipe,</text><text x="312" y="355" font-size="13.5" font-weight="400" fill="#4E5478" text-anchor="start">background display…</text>
 <g filter="url(#alsoft)"><rect x="548" y="172" width="198" height="232" rx="16" fill="#FFFFFF" stroke="#DADDF2"/></g>
 <rect x="548" y="172" width="198" height="4" rx="2" fill="#C9870E" transform="translate(0,0)"/>
 <rect x="566" y="194" width="40" height="40" rx="11" fill="#C9870E" fill-opacity=".14"/>

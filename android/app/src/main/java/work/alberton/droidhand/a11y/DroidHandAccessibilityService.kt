@@ -50,6 +50,7 @@ class DroidHandAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         instance = this
+        work.alberton.droidhand.adb.AdbSession.sweep(this)
         gate = MainScreenGate(this)
         stopButton = StopButton(this) { userStop() }
         // While a background session exists the Stop button stays on screen.

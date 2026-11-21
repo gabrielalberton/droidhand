@@ -27,7 +27,10 @@ class ToolPolicyTest {
     }
 
     @Test fun settingsAllowlistIsDebuggingAndAnimationsOnly() {
-        assertTrue("global/adb_wifi_enabled" in ToolPolicy.WRITABLE)
+        assertTrue("global/window_animation_scale" in ToolPolicy.WRITABLE)
+        // Debugging only through time-limited ADB sessions, never set_setting.
+        assertFalse("global/adb_enabled" in ToolPolicy.WRITABLE)
+        assertFalse("global/adb_wifi_enabled" in ToolPolicy.WRITABLE)
         assertFalse("secure/enabled_accessibility_services" in ToolPolicy.WRITABLE)
         assertFalse("secure/lock_screen_lock_after_timeout" in ToolPolicy.WRITABLE)
         assertTrue(ToolPolicy.WRITABLE.all { it.startsWith("global/") })

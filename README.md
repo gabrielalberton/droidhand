@@ -36,6 +36,7 @@ It runs on Android's **accessibility service**, so it does **not** need USB or w
 | ✋ **Acts like a person** | Tap, long-press, swipe, scroll, type, keys, open apps and links. |
 | 🪟 **Works in the background** | A second, virtual screen in a floating mini window — hide it and the agent keeps going behind an eye bubble. |
 | 🛑 **You stay in charge** | Asks before touching your screen while you use it, floating Stop button, kill switch in the notification and Quick Settings. |
+| 🔌 **ADB only on demand** | Debugging stays off. When a task really needs adb, the agent opens a short session over your tailnet (works on mobile data), and closes it when done — or the phone does, 10 minutes after the agent goes quiet. |
 | 🔒 **Locked-phone aware** | Knows when the phone is locked; optional unlock with a PIN sealed in Android Keystore (off by default). |
 | 🧾 **Audited** | Every call lands in an append-only audit log on your server; secrets are masked. |
 
@@ -107,7 +108,7 @@ DroidHand gives software **full control of a phone**. Only use it on a device **
 
 ## Status
 
-**1.0** — used daily on a Galaxy S24 Ultra (Android 17, One UI). Other phones should work but are less tested; reports are welcome. On the roadmap: reading notifications, ADB-on-demand sessions started from the phone itself, F-Droid. See the [changelog](CHANGELOG.md).
+**1.0** — used daily on a Galaxy S24 Ultra (Android 17, One UI). Other phones should work but are less tested; reports are welcome. On the roadmap: reading notifications, F-Droid. See the [changelog](CHANGELOG.md).
 
 ## Contributing
 
