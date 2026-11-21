@@ -363,12 +363,22 @@ fun confirmUser(activity: Activity, title: String, onOk: () -> Unit) {
                 android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL,
         )
         .build()
-    prompt.authenticate(
-        android.os.CancellationSignal(), activity.mainExecutor,
-        object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult) = onOk()
-        },
-    )
+    try {
+        prompt.authenticate(
+            android.os.CancellationSignal(), activity.mainExecutor,
+            object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult) = onOk()
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) {
+                    val cancelled = errorCode == android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED ||
+                        errorCode == android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_CANCELED
+                    if (!cancelled && errString != null) android.widget.Toast.makeText(activity, errString, android.widget.Toast.LENGTH_LONG).show()
+                }
+            },
+        )
+    } catch (e: Exception) {
+        // Never crash the app over the confirmation dialog.
+        android.widget.Toast.makeText(activity, e.message ?: e.javaClass.simpleName, android.widget.Toast.LENGTH_LONG).show()
+    }
 }
 
 @Composable
