@@ -158,8 +158,8 @@ export class Core {
   private async startHelper(args: ToolArgs): Promise<ToolResult> {
     const tool = "own_helper_start";
     try {
-      const serial = this.cfg.adbSerial || (this.adb.current
-        ?? await this.adb.begin()).serial;
+      const serial = this.cfg.adbSerial
+        || (this.adb.current ? await this.adb.ready() : (await this.adb.begin()).serial);
       await startShellHelper(this.cfg.adbPath, serial);
       let available = false;
       for (let i = 0; i < HELPER_POLL_ATTEMPTS && !available; i++) {

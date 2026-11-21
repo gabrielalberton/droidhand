@@ -47,7 +47,7 @@ Check it: `systemctl --user status droidhand-relay`.
 1. Download **`droidhand-<version>.apk`** from the [latest release](https://github.com/gabrielalberton/droidhand/releases/latest) and open it (allow installing from your browser/files app when Android asks). Verify it if you like: `sha256sum` against `SHA256SUMS`, and the signing certificate against `signing-certificate.txt` in the release.
 2. Open **DroidHand**. The home screen shows the connection status and a permissions panel.
 
-<p align="center"><img src="images/screenshots/home.png" alt="DroidHand home screen: status card and permissions panel" width="300"></p>
+<!-- screenshot: <p align="center"><img src="images/screenshots/home.png" alt="DroidHand home screen: status card and permissions panel" width="300"></p> -->
 
 3. **Connection** → enter the relay address, `ws://<computer-tailnet-ip>:8787`, and paste the token (`cat ~/.config/droidhand/token` on the computer). It saves automatically and reconnects when you leave the screen.
 4. **Permissions** panel → tap each row:
@@ -112,7 +112,7 @@ In the app, **Background window** shows which method the agent may use and the h
 
 ### Privacy & safety settings
 
-<p align="center"><img src="images/screenshots/privacy.png" alt="Privacy & safety screen" width="300"></p>
+<!-- screenshot: <p align="center"><img src="images/screenshots/privacy.png" alt="Privacy & safety screen" width="300"></p> -->
 
 - **Ask before using the main screen** (on by default): while you are using the phone, the agent asks before tapping or typing on your screen.
 - **Feature suggestions** (off by default): lets the agent log ideas for DroidHand on your computer (`suggest_feature`).
@@ -120,7 +120,7 @@ In the app, **Background window** shows which method the agent may use and the h
 
 ### Appearance
 
-<p align="center"><img src="images/screenshots/appearance.png" alt="Appearance screen: theme, language, accent colors" width="300"></p>
+<!-- screenshot: <p align="center"><img src="images/screenshots/appearance.png" alt="Appearance screen: theme, language, accent colors" width="300"></p> -->
 
 System/light/dark theme, English or Portuguese, wallpaper colors or one of five accents.
 

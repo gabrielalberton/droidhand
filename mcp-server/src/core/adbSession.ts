@@ -109,10 +109,21 @@ export class AdbSessions {
     void this.dispatch("adb_enable", { ttlSeconds: IDLE_S }).catch(() => undefined);
   }
 
+  /** Serial of the open session, reconnecting first if adb lost it (e.g. "device offline"). */
+  async ready(): Promise<string> {
+    if (!this.active) throw new Error("no ADB session: call adb_session_begin first");
+    const serial = this.serial!;
+    const state = await runFull(this.adb, ["-s", serial, "get-state"], 5000).catch(() => null);
+    if (state?.stdout.trim() === "device") return serial;
+    await run(this.adb, ["disconnect", serial], 3000).catch(() => undefined);
+    if (!(await this.connect(serial, this.t.afterArm))) throw new Error(`lost the ADB connection to ${serial}`);
+    return serial;
+  }
+
   /** Run a shell command in the open session. */
   async shell(command: string, timeoutMs = 30_000): Promise<AdbOutput> {
-    if (!this.active) throw new Error("no ADB session: call adb_session_begin first");
-    return runFull(this.adb, ["-s", this.serial!, "shell", command], timeoutMs);
+    const serial = await this.ready();
+    return runFull(this.adb, ["-s", serial, "shell", command], timeoutMs);
   }
 
   /**

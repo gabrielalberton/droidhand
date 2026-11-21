@@ -25,6 +25,7 @@ case "$1" in
       *) echo "failed to connect to '$2'"; exit 1 ;;
     esac ;;
   disconnect) echo "disconnected $2" ;;
+  get-state) echo device ;;
   tcpip) touch "$D/armed"; echo "restarting in TCP mode port: $2" ;;
   shell) shift; if [ "$*" = "echo dh-ok" ]; then echo dh-ok; else echo "ran: $*"; exit 3; fi ;;
 esac
