@@ -10,7 +10,8 @@ export const apps: ToolArea = {
       description: "Launch an app by package name (display=<id> for a background display; bounds=[l,t,r,b] px opens a One UI pop-up window on the main screen).",
       input: { package: z.string(), bounds: z.array(z.number()).length(4).optional() } },
     { name: "open_url", tier: "standard", confirm: false,
-      description: "Open a URL in the default browser.", input: { url: z.string().url() } },
+      description: "Open a URL in the default app for it, on the phone screen. For a background display, launch the browser there and type the URL.",
+      input: { url: z.string().url() } },
     { name: "go_home", tier: "standard", confirm: false, description: "Go to the home screen.", input: {} },
   ],
 };

@@ -1,6 +1,8 @@
 # DroidHand — Product Requirements Document (PRD)
 
-> **Status:** Draft v0.1 · **Last updated:** 2026-11-20 · **Owner:** project maintainer
+> **Status:** Original design document (v0.2). It describes the full vision, including parts not built yet
+> (ADB-on-demand from the phone, notification listener, on-device confirmation dialogs, resources). What ships is
+> described in the [README](../README.md), [architecture](architecture.md) and [tools](tools.md). · **Owner:** project maintainer
 > **Codename:** `droidhand` *(provisional — rename is a project-wide find/replace of the string `droidhand`)*
 > **Tagline:** *Hands-on-device control of a personal Android phone for any AI agent — without leaving ADB on.*
 
@@ -400,10 +402,10 @@ Ready-to-paste once the MCP server is built (Phase 1). **Not wired in until the 
   "mcpServers": {
     "droidhand": {
       "command": "node",
-      "args": ["/home/gabriel/projects/droidhand/mcp-server/dist/index.js"],
+      "args": ["/path/to/droidhand/mcp-server/dist/index.js"],
       "env": {
         "DROIDHAND_RELAY_URL": "wss://<NUC_TAILSCALE_IP>:<PORT>",
-        "DROIDHAND_TOKEN_FILE": "/home/gabriel/.config/droidhand/token"
+        "DROIDHAND_TOKEN_FILE": "/home/<you>/.config/droidhand/token"
       }
     }
   }
@@ -414,8 +416,8 @@ Ready-to-paste once the MCP server is built (Phase 1). **Not wired in until the 
 ```toml
 [mcp_servers.droidhand]
 command = "node"
-args = ["/home/gabriel/projects/droidhand/mcp-server/dist/index.js"]
-env = { DROIDHAND_RELAY_URL = "wss://<NUC_TAILSCALE_IP>:<PORT>", DROIDHAND_TOKEN_FILE = "/home/gabriel/.config/droidhand/token" }
+args = ["/path/to/droidhand/mcp-server/dist/index.js"]
+env = { DROIDHAND_RELAY_URL = "wss://<NUC_TAILSCALE_IP>:<PORT>", DROIDHAND_TOKEN_FILE = "/home/<you>/.config/droidhand/token" }
 ```
 
 ---

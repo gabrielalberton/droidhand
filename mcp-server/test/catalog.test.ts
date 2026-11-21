@@ -1,19 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { z } from "zod";
-import { CATALOG, CATALOG_AREAS, CATALOG_BY_NAME, DISPLAY_PARAM } from "../src/catalog.js";
+import { CATALOG, CATALOG_AREAS, CATALOG_BY_NAME, DISPLAY_PARAM, PLANNED_TOOLS } from "../src/catalog.js";
 
 /**
  * Tool names are a contract with the Android app. This list must only change
  * together with the app; update it deliberately.
  */
 const EXPECTED_TOOLS = [
-  "screen_snapshot", "screen_capture", "get_foreground_app", "list_windows", "get_notifications", "list_apps",
+  "screen_snapshot", "screen_capture", "get_foreground_app", "list_windows", "list_apps",
   "tap", "long_press", "swipe", "scroll", "type_text", "key_event", "global_action",
   "launch_app", "open_url", "go_home",
   "get_device_info", "get_setting", "set_setting",
   "get_lock_state", "unlock_device",
-  "adb_session_begin", "adb_shell", "adb_install", "pm_grant", "adb_session_end",
   "bg_open", "bg_status", "bg_hide", "bg_show", "bg_close", "request_user_help", "own_helper_start", "own_helper_stop",
   "suggest_feature", "list_suggestions", "export_suggestions",
   "get_audit_log", "panic_disconnect",
@@ -24,8 +23,16 @@ const LOCAL_TOOLS = [
   "get_audit_log", "panic_disconnect",
 ];
 
+/** Designed, not implemented in the app yet: must not be offered to agents. */
+const PLANNED = ["get_notifications", "adb_session_begin", "adb_shell", "adb_install", "pm_grant", "adb_session_end"];
+
 test("catalog has exactly the expected tools, in order", () => {
   assert.deepEqual(CATALOG.map((t) => t.name), EXPECTED_TOOLS);
+});
+
+test("planned tools are listed separately and never offered", () => {
+  assert.deepEqual(PLANNED_TOOLS.map((t) => t.name), PLANNED);
+  for (const name of PLANNED) assert.equal(CATALOG_BY_NAME.get(name), undefined, name);
 });
 
 test("tool names are unique, snake_case, and indexed by name", () => {
@@ -76,11 +83,18 @@ test("areas partition the catalog and have unique ids", () => {
   assert.deepEqual(CATALOG_AREAS.flatMap((a) => a.tools), [...CATALOG]);
 });
 
-test("privileged settings writes and ADB actions require on-device confirmation", () => {
-  for (const name of ["set_setting", "adb_session_begin", "adb_shell", "adb_install", "pm_grant"]) {
-    const t = CATALOG_BY_NAME.get(name);
-    assert.ok(t);
+test("planned ADB actions are privileged and designed to require on-device confirmation", () => {
+  for (const name of ["adb_session_begin", "adb_shell", "adb_install", "pm_grant"]) {
+    const t = PLANNED_TOOLS.find((p) => p.name === name);
+    assert.ok(t, name);
     assert.equal(t.tier, "privileged");
     assert.equal(t.confirm, true, `${name} must require confirmation`);
   }
+});
+
+test("set_setting is privileged and documents its allowlist", () => {
+  const t = CATALOG_BY_NAME.get("set_setting");
+  assert.ok(t);
+  assert.equal(t.tier, "privileged");
+  assert.match(t.description, /allowlist/);
 });

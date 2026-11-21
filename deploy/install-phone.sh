@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install/update the DroidHand Portal app on a phone over adb and (re)apply the
+# Install/update the DroidHand app on a phone over adb and (re)apply the
 # one-time grants. Android disables an app's accessibility service when the app is
 # updated, so this script re-enables it every time, appending to (never replacing)
 # the services already enabled.

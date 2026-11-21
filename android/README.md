@@ -1,54 +1,34 @@
-# DroidHand — Portal app (Android)
+# DroidHand — Android app
 
-Kotlin app that runs on the phone and performs actions for the agent: it dials out
-to the relay, snapshots the UI and dispatches gestures through the
-AccessibilityService, and owns the on-device feature-suggestion log.
+The phone side of DroidHand. It dials out to the relay, runs each tool through its accessibility service, and enforces the on-device safety rules (ask first, Stop, visible background work, kill switches). Architecture and package layout: [../docs/architecture.md](../docs/architecture.md#inside-the-app).
 
-> **Status: P1 skeleton — written, not yet built or device-tested on this machine.**
-> Builds need a JDK 17 + Android SDK; installing/testing needs a phone with
-> wireless debugging on. The NUC-side relay + MCP server are built and tested.
+- Kotlin + Jetpack Compose (Material 3), min SDK 30 (Android 11), target SDK 35.
+- Application id `work.alberton.droidhand`; accessibility service `work.alberton.droidhand.a11y.DroidHandAccessibilityService`.
 
-## Layout
-```
-app/                      # Gradle root (this dir)
-  settings.gradle.kts
-  build.gradle.kts        # plugin versions
-  gradle.properties
-  portal/                 # :portal application module
-    build.gradle.kts
-    src/main/AndroidManifest.xml
-    src/main/res/xml/accessibility_service_config.xml
-    src/main/java/work/alberton/droidhand/
-      DroidHandApp.kt
-      data/Prefs.kt                     # settings; suggestionLogging = false by default
-      suggestions/SuggestionStore.kt    # on-device suggestion log (source of truth)
-      relay/RelayClient.kt              # outbound WebSocket to the relay
-      a11y/DroidHandAccessibilityService.kt  # snapshot + gestures
-      tools/ToolRouter.kt              # tool name -> device action
-      service/RelayService.kt          # foreground service + kill-switch notification
-      ui/MainActivity.kt               # setup/status UI
-```
+## Build
 
-## Build (needs JDK 17 + Android SDK)
+Needs JDK 17+ and the Android SDK (`ANDROID_HOME` or `local.properties` with `sdk.dir`).
+
 ```bash
-cd app
-# first time: generate the Gradle wrapper with a Gradle 8.9+ install, or open in Android Studio
-gradle wrapper --gradle-version 8.9
-./gradlew :portal:assembleDebug
-# APK at portal/build/outputs/apk/debug/portal-debug.apk
+./gradlew :app:testDebugUnitTest   # JVM unit tests
+./gradlew :app:assembleDebug       # app/build/outputs/apk/debug/droidhand-debug.apk
+./gradlew :app:assembleRelease     # app/build/outputs/apk/release/droidhand-release.apk
 ```
 
-## Install & grant (phone with wireless debugging on)
+The release build is minified with R8. It is **signed** only when a properties file with `storeFile`, `storePassword`, `keyAlias` and `keyPassword` is found at `android/keystore.properties` (git-ignored) or at `$DROIDHAND_KEYSTORE_PROPERTIES`; otherwise it is unsigned. Debug and release builds use different keys, so switching between them requires uninstalling the app.
+
+Version: `versionName` / `versionCode` in `app/build.gradle.kts` (keep in sync with `mcp-server/package.json`).
+
+## Install over adb
+
 ```bash
-adb install -r portal/build/outputs/apk/debug/portal-debug.apk
-# one-time privileged grant (enables set_setting + the ADB-on-demand engine):
-adb shell pm grant work.alberton.droidhand android.permission.WRITE_SECURE_SETTINGS
+../deploy/install-phone.sh [serial] [apk]
 ```
-Then in the app: enter the relay URL (`ws://<nuc-tailscale-ip>:8787`) + token, open
-Accessibility settings and enable DroidHand, and tap **Start agent service**. The
-feature-suggestion switch stays **OFF** unless you turn it on.
 
-## Not yet in this skeleton (later phases)
-- ADB-on-demand engine (clean-room ADB client) — PRD §8
-- screenshots/screen-capture tool, notifications listener, content-identity refs
-- PII redaction mode, confirmation dialogs, local encrypted audit, Quick Settings tile
+Installs (release build if present, else debug), grants `WRITE_SECURE_SETTINGS` and notifications, and re-enables the accessibility service — Android turns it off on every update.
+
+## Shell helper
+
+`shell/ShellMain` is not part of the app process: the relay starts it with
+`adb shell CLASSPATH=<apk> app_process /system/bin work.alberton.droidhand.shell.ShellMain`.
+Running as the shell user, it creates the trusted virtual display for the own-window background method and injects input into it; it talks to the app over the `IShellHelper` binder. R8 keeps it unrenamed (`proguard-rules.pro`).

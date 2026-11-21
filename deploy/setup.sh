@@ -7,7 +7,7 @@ set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOME_DIR="${HOME}"
 NODE="$(command -v node || true)"
-GH_OWNER="${GH_OWNER:-your-github-user}"
+GH_OWNER="${GH_OWNER:-gabrielalberton}"
 
 if [[ -z "${NODE}" ]]; then
   echo "error: node not found on PATH" >&2

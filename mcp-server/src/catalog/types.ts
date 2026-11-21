@@ -16,6 +16,8 @@ export interface ToolDef {
   readonly description: string;
   /** zod shape of the tool arguments, exposed to agents as the MCP input schema. */
   readonly input: ZodRawShape;
+  /** Designed but not implemented yet: not offered to agents, listed as planned in the docs. */
+  readonly planned?: boolean;
 }
 
 /** A group of related tools; used for source layout and the generated docs. */

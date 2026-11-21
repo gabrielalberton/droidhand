@@ -37,7 +37,7 @@
     <string name="perm_battery">Unrestricted battery</string>
     <string name="perm_battery_desc">Keeps the connection alive with the screen off.</string>
     <string name="perm_secure">Secure settings</string>
-    <string name="perm_secure_desc">Native background window, on-demand ADB and settings.</string>
+    <string name="perm_secure_desc">Native background window and the debugging settings the agent may change.</string>
     <string name="perm_secure_how">Grant once from a computer:</string>
     <string name="action_enable">Enable</string>
     <string name="action_allow">Allow</string>

@@ -35,7 +35,7 @@
     <string name="perm_battery">Bateria sem restrição</string>
     <string name="perm_battery_desc">Mantém a conexão com a tela apagada.</string>
     <string name="perm_secure">Configurações seguras</string>
-    <string name="perm_secure_desc">Janela de fundo nativa, ADB sob demanda e ajustes.</string>
+    <string name="perm_secure_desc">Janela de fundo nativa e os ajustes de depuração que o agente pode mudar.</string>
     <string name="perm_secure_how">Conceda uma vez pelo computador:</string>
     <string name="action_enable">Ativar</string>
     <string name="action_allow">Permitir</string>

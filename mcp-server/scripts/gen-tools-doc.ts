@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { z, type ZodTypeAny } from "zod";
-import { CATALOG, CATALOG_AREAS, type ToolDef } from "../src/catalog.js";
+import { CATALOG, CATALOG_AREAS, PLANNED_TOOLS, type ToolDef } from "../src/catalog.js";
 
 export const TOOLS_DOC_PATH = fileURLToPath(new URL("../../docs/tools.md", import.meta.url));
 
@@ -111,6 +111,12 @@ export function renderToolsDoc(): string {
         : "—";
       out.push(`| \`${t.name}\` | ${cell(t.description)} | ${inputs} | ${notes(t)} |`);
     }
+    out.push("");
+  }
+  if (PLANNED_TOOLS.length) {
+    out.push("## Planned", "", "Designed but not implemented in the app yet, so they are not offered to agents.", "",
+      "| Tool | What it will do |", "| --- | --- |");
+    for (const t of PLANNED_TOOLS) out.push(`| \`${t.name}\` | ${cell(t.description)} |`);
     out.push("");
   }
   return out.join("\n");

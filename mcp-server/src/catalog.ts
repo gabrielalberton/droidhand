@@ -33,10 +33,15 @@ function withDisplayParam(t: ToolDef): ToolDef {
 
 const RAW_AREAS: readonly ToolArea[] = [perception, interaction, apps, device, lock, adb, background, suggestions, safety];
 
-/** Tool areas in catalog order, with the `display` argument already applied. */
-export const CATALOG_AREAS: readonly ToolArea[] = RAW_AREAS.map((a) => ({ ...a, tools: a.tools.map(withDisplayParam) }));
+/** Tool areas in catalog order with only the available tools (`display` applied); empty areas are dropped. */
+export const CATALOG_AREAS: readonly ToolArea[] = RAW_AREAS
+  .map((a) => ({ ...a, tools: a.tools.filter((t) => !t.planned).map(withDisplayParam) }))
+  .filter((a) => a.tools.length > 0);
 
-/** Every tool, in the order they are registered with the MCP server. */
+/** Every available tool, in the order they are registered with the MCP server. */
 export const CATALOG: readonly ToolDef[] = CATALOG_AREAS.flatMap((a) => a.tools);
+
+/** Designed but not implemented yet; never offered to agents (see the roadmap in docs/tools.md). */
+export const PLANNED_TOOLS: readonly ToolDef[] = RAW_AREAS.flatMap((a) => a.tools.filter((t) => t.planned));
 
 export const CATALOG_BY_NAME: ReadonlyMap<string, ToolDef> = new Map(CATALOG.map((t) => [t.name, t]));

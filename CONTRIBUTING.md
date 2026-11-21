@@ -5,30 +5,50 @@ Thanks for your interest! DroidHand is an original, Apache-2.0 project. By contr
 ## Ground rules
 
 - **No license contamination.** Do not paste code from GPL/other projects (notably Shizuku). Study mechanisms, then write original code. Any third-party dependency must be license-compatible and listed in `THIRD-PARTY-NOTICES.md`.
-- **No secrets, no PII in the repo.** No tokens, keys, real IPs, names, or emails. Use placeholders (`<NUC_TAILSCALE_IP>`).
-- **Security first.** New tools in a sensitive/privileged tier must ship with a confirmation gate and an audit record. See PRD §7 and §9.
+- **No secrets, no PII in the repo.** No tokens, keys, real IPs, names, or emails. Use placeholders (`<computer-tailnet-ip>`).
+- **Security first.** New tools that act on the phone must go through the existing guards (Stop, main-screen confirmation, background-display controls) and be audited. See [SECURITY.md](SECURITY.md).
 - **Respect the non-goals.** No root, no work-profile/MDM circumvention (PRD §2.1, §3.2).
 
 ## Workflow
 
 1. Open an issue describing the change (templates in `.github/ISSUE_TEMPLATE/`).
 2. Branch from `main`; keep PRs focused.
-3. **Conventional Commits** (`feat:`, `fix:`, `docs:`, `chore:`…). Semver.
-4. Add/adjust tests (unit + contract; instrumented for app behavior).
-5. Pass CI (build, lint, test).
-6. Describe security implications of your change in the PR.
+3. **Conventional Commits** (`feat:`, `fix:`, `docs:`, `refactor:`…) and semver.
+4. Add or adjust tests.
+5. CI must pass (typecheck, tests, builds, tools-doc check).
+6. Describe the security implications of your change in the PR.
 
 ## Project layout
 
-- `app/` — Kotlin Portal app.
-- `mcp-server/` — TypeScript MCP server + relay.
-- `relay/` — shared transport notes.
-- `docs/PRD.md` — the source of truth for scope and design.
+- `android/` — the DroidHand app (Kotlin, Compose). Layout in [docs/architecture.md](docs/architecture.md#inside-the-app).
+- `mcp-server/` — relay daemon + MCP adapter (TypeScript). See its [README](mcp-server/README.md).
+- `deploy/` — relay setup, systemd unit, phone install script.
+- `docs/` — setup, architecture & protocol, generated tool reference, design doc.
 
-## Dev setup (once scaffolds land)
+Tool names, input schemas and the wire protocol are a contract between the two halves: change them together.
 
-- App: Android Studio, min SDK 30.
-- MCP server: Node LTS, `npm i`, `npm run build`, `npm test`.
+## Dev setup
+
+**MCP server** (Node 20+):
+
+```bash
+cd mcp-server
+npm ci
+npm test            # no phone needed; a mock phone is used
+npm run typecheck
+npm run docs:tools  # after changing the catalog
+```
+
+**App** (JDK 17+, Android SDK 35):
+
+```bash
+cd android
+./gradlew :app:testDebugUnitTest   # JVM unit tests (ToolPolicy, PinPad, …)
+./gradlew :app:assembleDebug       # app/build/outputs/apk/debug/droidhand-debug.apk
+../deploy/install-phone.sh         # install over adb and re-enable the accessibility service
+```
+
+Release builds are signed only when `android/keystore.properties` (git-ignored) points at a key; maintainers cut releases with `scripts/release.sh`.
 
 ## Code of conduct
 

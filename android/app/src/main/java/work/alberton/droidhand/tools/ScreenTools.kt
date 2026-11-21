@@ -44,10 +44,7 @@ class ScreenTools : ToolGroup {
             ToolResult(ok, JSONObject().put("typed", ok), if (ok) null else "no focused text field")
         }
         "key_event" -> ctx.withService { s -> keyEvent(s, args.getString("key")) }
-        "global_action" -> ctx.withService {
-            val action = args.getString("action")
-            ToolResult(it.globalKey(if (action == "clear_all_notifications") "notifications" else action))
-        }
+        "global_action" -> ctx.withService { ToolResult(it.globalKey(args.getString("action"))) }
         "go_home" -> ctx.withService { ToolResult(it.globalKey("home")) }
         else -> null
     }
