@@ -7,7 +7,10 @@
 set -euo pipefail
 ADB="${ADB:-adb}"
 SERIAL="${1:-}"
-APK="${2:-$(dirname "$0")/../app/portal/build/outputs/apk/debug/portal-debug.apk}"
+OUT="$(dirname "$0")/../android/app/build/outputs/apk"
+# Default: the signed release build if present, else the debug build.
+DEFAULT_APK="$OUT/release/droidhand-release.apk"; [[ -f "$DEFAULT_APK" ]] || DEFAULT_APK="$OUT/debug/droidhand-debug.apk"
+APK="${2:-$DEFAULT_APK}"
 PKG=work.alberton.droidhand
 SVC="$PKG/$PKG.a11y.DroidHandAccessibilityService"
 A=("$ADB"); [[ -n "$SERIAL" ]] && A+=(-s "$SERIAL")

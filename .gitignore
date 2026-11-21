@@ -1,4 +1,6 @@
 # === Secrets — NEVER commit ===
+keystore.properties
+*-keystore.properties
 *.token
 token
 *.key
@@ -28,6 +30,14 @@ app/build/
 .idea/
 captures/
 .cxx/
+.kotlin/
+
+# === Release output (scripts/release.sh) ===
+/release/
+
+# === Personal / local-only notes and overrides ===
+*.local.md
+.local/
 
 # === OS / editor ===
 .DS_Store
