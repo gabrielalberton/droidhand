@@ -115,6 +115,8 @@ export class Relay {
         if (this.phone && this.phone !== ws) this.phone.close(4000, "replaced by new session");
         this.phone = ws;
         this.device = frame.device;
+        // Lets the app show "connected" only once the token was accepted.
+        ws.send(JSON.stringify({ type: "event", event: "welcome", payload: null }));
         return;
       }
 

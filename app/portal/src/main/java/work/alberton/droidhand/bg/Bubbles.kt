@@ -42,7 +42,7 @@ class Bubbles(private val ctx: Context, private val session: BackgroundSession) 
                 setColor(Color.parseColor("#1E88E5")); setStroke(ctx.dp(1f), Color.WHITE)
             }
             alpha = 0.7f
-            contentDescription = "Show DroidHand background window"
+            contentDescription = ctx.getString(work.alberton.droidhand.R.string.cd_show_bg)
             setOnClickListener { session.show() }
         }
         val lp = overlayParams(size, size, Gravity.TOP or Gravity.END).apply {
@@ -90,13 +90,13 @@ class Bubbles(private val ctx: Context, private val session: BackgroundSession) 
     fun showNativeHandle() {
         if (handle != null) return
         val v = TextView(ctx).apply {
-            text = "⠿ tela de fundo"
+            text = ctx.getString(work.alberton.droidhand.R.string.float_handle)
             setTextColor(Color.WHITE); setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             val p = ctx.dp(8f); setPadding(p, p / 2, p, p / 2)
             background = GradientDrawable().apply {
                 cornerRadius = ctx.dp(14f).toFloat(); setColor(Color.parseColor("#CC202124"))
             }
-            contentDescription = "DroidHand background window: drag to the X to close"
+            contentDescription = ctx.getString(work.alberton.droidhand.R.string.cd_handle_bg)
         }
         val lp = overlayParams(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT).apply {
             x = ctx.dp(12f); y = ctx.dp(80f)
@@ -118,7 +118,7 @@ class Bubbles(private val ctx: Context, private val session: BackgroundSession) 
                     val close = moved && hover(e.rawX, e.rawY)
                     hideTarget()
                     if (close) session.close("user")
-                    else if (!moved) Toast.makeText(ctx, "Arraste até o X para fechar a tela de fundo", Toast.LENGTH_SHORT).show()
+                    else if (!moved) Toast.makeText(ctx, work.alberton.droidhand.R.string.float_handle_hint, Toast.LENGTH_SHORT).show()
                 }
             }
             true

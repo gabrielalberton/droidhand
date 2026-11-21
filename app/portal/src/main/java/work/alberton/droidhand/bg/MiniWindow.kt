@@ -64,7 +64,7 @@ class MiniWindow(private val ctx: Context, private val session: BackgroundSessio
         val back = TextView(ctx).apply {
             text = "‹"; setTextColor(Color.WHITE); setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
             gravity = Gravity.CENTER
-            contentDescription = "Back (background window)"
+            contentDescription = ctx.getString(work.alberton.droidhand.R.string.cd_back_bg)
             setOnClickListener { session.key(KeyEvent.KEYCODE_BACK) }
         }
         bar.addView(back, LinearLayout.LayoutParams(ctx.dp(34f), titleH))
@@ -77,12 +77,12 @@ class MiniWindow(private val ctx: Context, private val session: BackgroundSessio
         title = label
         bar.addView(label, LinearLayout.LayoutParams(0, titleH, 1f))
         val hide = TextView(ctx).apply {
-            text = "Esconder"; setTextColor(Color.WHITE); setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            text = ctx.getString(work.alberton.droidhand.R.string.float_hide); setTextColor(Color.WHITE); setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
             val p = ctx.dp(8f); setPadding(p, ctx.dp(3f), p, ctx.dp(3f))
             background = GradientDrawable().apply {
                 cornerRadius = ctx.dp(12f).toFloat(); setColor(Color.parseColor("#3D5AFE"))
             }
-            contentDescription = "Hide background window (the agent keeps working)"
+            contentDescription = ctx.getString(work.alberton.droidhand.R.string.cd_hide_bg)
             setOnClickListener { session.hide() }
         }
         bar.addView(hide, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
@@ -119,7 +119,7 @@ class MiniWindow(private val ctx: Context, private val session: BackgroundSessio
         val grip = TextView(ctx).apply {
             text = "◢"; setTextColor(Color.parseColor("#CCFFFFFF")); setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             gravity = Gravity.BOTTOM or Gravity.END
-            contentDescription = "Resize background window"
+            contentDescription = ctx.getString(work.alberton.droidhand.R.string.cd_resize_bg)
         }
         content.addView(grip, FrameLayout.LayoutParams(ctx.dp(36f), ctx.dp(36f), Gravity.BOTTOM or Gravity.END))
 
@@ -161,7 +161,7 @@ class MiniWindow(private val ctx: Context, private val session: BackgroundSessio
         if (msg.isNullOrBlank()) {
             b.visibility = View.GONE
         } else {
-            b.text = "⚠ $msg\n(toque aqui quando terminar)"
+            b.text = "⚠ $msg\n" + ctx.getString(work.alberton.droidhand.R.string.float_help_done)
             b.visibility = View.VISIBLE
         }
         // The window grows to fit the banner.

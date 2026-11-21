@@ -14,6 +14,9 @@ import work.alberton.droidhand.data.Prefs
 import work.alberton.droidhand.tools.ToolRouter
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import work.alberton.droidhand.BuildConfig
 
 /**
  * Outbound-only WebSocket client to the relay. Sends a hello (with device info +
@@ -32,6 +35,7 @@ class RelayClient(context: Context) {
     private val worker = Executors.newSingleThreadExecutor()
     private var ws: WebSocket? = null
     @Volatile private var running = false
+    @Volatile private var unauthorized = false
 
     fun start() {
         running = true
@@ -47,20 +51,23 @@ class RelayClient(context: Context) {
     private fun deviceJson(): JSONObject = JSONObject()
         .put("model", Build.MODEL)
         .put("androidSdk", Build.VERSION.SDK_INT)
-        .put("appVersion", "0.1.0")
+        .put("appVersion", BuildConfig.VERSION_NAME)
         .put("suggestionLogging", prefs.suggestionLogging)
 
     fun stop() {
         running = false
-        if (current === this) current = null
+        if (current === this) { current = null; _state.value = State.OFF }
         ws?.close(1000, "stop")
         ws = null
     }
 
     private fun connect() {
         val url = prefs.relayUrl
-        if (url.isBlank()) return
-        ws = client.newWebSocket(Request.Builder().url(url).build(), listener)
+        if (url.isBlank()) { _state.value = State.NOT_CONFIGURED; return }
+        _state.value = State.CONNECTING
+        val req = runCatching { Request.Builder().url(url).build() }.getOrNull()
+            ?: run { _state.value = State.NOT_CONFIGURED; return }
+        ws = client.newWebSocket(req, listener)
     }
 
     private val listener = object : WebSocketListener() {
@@ -71,6 +78,10 @@ class RelayClient(context: Context) {
                 .put("token", prefs.token)
                 .put("device", device)
             webSocket.send(hello.toString())
+            // Older relays send no welcome: assume accepted if still open after 2 s.
+            Handler(Looper.getMainLooper()).postDelayed({
+                if (ws === webSocket && running && _state.value == State.CONNECTING) _state.value = State.CONNECTED
+            }, 2000)
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
@@ -78,6 +89,9 @@ class RelayClient(context: Context) {
                 JSONObject(text)
             } catch (e: Exception) {
                 return
+            }
+            if (frame.optString("type") == "event" && frame.optString("event") == "welcome") {
+                _state.value = State.CONNECTED; return
             }
             if (frame.optString("type") != "cmd") return
             val id = frame.optString("id")
@@ -93,6 +107,7 @@ class RelayClient(context: Context) {
         }
 
         override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+            if (code == 4003 && running) { _state.value = State.UNAUTHORIZED; unauthorized = true }
             webSocket.close(1000, null)
         }
 
@@ -102,10 +117,18 @@ class RelayClient(context: Context) {
 
     private fun scheduleReconnect() {
         if (!running) return
+        if (unauthorized) { _state.value = State.UNAUTHORIZED; unauthorized = false; return } // wait for new settings
+        if (_state.value == State.CONNECTED) _state.value = State.CONNECTING
         Handler(Looper.getMainLooper()).postDelayed({ if (running) connect() }, 3000)
     }
 
+    /** Connection state, observed by the UI. */
+    enum class State { OFF, NOT_CONFIGURED, CONNECTING, CONNECTED, UNAUTHORIZED }
+
     companion object {
+        private val _state = MutableStateFlow(State.OFF)
+        val state: StateFlow<State> = _state
+
         @Volatile
         var current: RelayClient? = null
             private set

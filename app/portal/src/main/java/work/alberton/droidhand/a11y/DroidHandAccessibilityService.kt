@@ -58,7 +58,7 @@ class DroidHandAccessibilityService : AccessibilityService() {
         if (::panic.isInitialized) { panic.setPinned(false); panic.hide() }
         work.alberton.droidhand.service.RelayService.stop(this)
         android.os.Handler(android.os.Looper.getMainLooper()).post {
-            android.widget.Toast.makeText(this, "DroidHand: agent stopped", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(this, work.alberton.droidhand.R.string.float_agent_stopped, android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 

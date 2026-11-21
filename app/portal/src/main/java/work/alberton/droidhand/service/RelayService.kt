@@ -28,6 +28,11 @@ class RelayService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        if (intent?.action == ACTION_RESTART) {
+            relay?.stop()
+            relay = null
+            if (!work.alberton.droidhand.data.Prefs(this).serviceEnabled) { stopSelf(); return START_NOT_STICKY }
+        }
         startForeground(NOTIF_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         if (relay == null) {
             relay = RelayClient(this).also { it.start() }
@@ -55,19 +60,25 @@ class RelayService : Service() {
         return NotificationCompat.Builder(this, DroidHandApp.CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(getString(R.string.notif_connected))
-            .setSmallIcon(android.R.drawable.ic_menu_manage)
+            .setSmallIcon(R.drawable.ic_stat_droidhand)
             .setOngoing(true)
             .setContentIntent(open)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Disconnect", stop)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, getString(R.string.notif_disconnect), stop)
             .build()
     }
 
     companion object {
         const val NOTIF_ID = 1001
         const val ACTION_STOP = "work.alberton.droidhand.STOP"
+        const val ACTION_RESTART = "work.alberton.droidhand.RESTART"
 
         fun start(context: Context) {
             context.startForegroundService(Intent(context, RelayService::class.java))
+        }
+
+        /** Reconnect with the current settings (e.g. after editing the address or token). */
+        fun restart(context: Context) {
+            context.startService(Intent(context, RelayService::class.java).setAction(ACTION_RESTART))
         }
 
         fun stop(context: Context) {

@@ -1,155 +1,127 @@
 package work.alberton.droidhand.ui
 
 import android.content.Context
-import android.content.Intent
+import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.material3.Text
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.password
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import work.alberton.droidhand.R
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
+import work.alberton.droidhand.a11y.DroidHandAccessibilityService
+import work.alberton.droidhand.bg.BackgroundSession
 import work.alberton.droidhand.data.Prefs
 import work.alberton.droidhand.relay.RelayClient
 import work.alberton.droidhand.service.RelayService
+import work.alberton.droidhand.shell.ShellBridge
+import work.alberton.droidhand.ui.theme.Accent
+import work.alberton.droidhand.ui.theme.DroidHandTheme
+import work.alberton.droidhand.ui.theme.isAppDark
 
-/**
- * Minimal setup/status UI (P1 skeleton). The feature-suggestion switch is OFF by
- * default; everything else is manual, auditable configuration.
- */
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppConfig.wrap(newBase))
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val prefs = Prefs(this)
         if (prefs.serviceEnabled && prefs.relayUrl.isNotBlank()) RelayService.start(this)
-        setContent { MaterialTheme { Screen(prefs, this) } }
+        setContent { App(prefs) }
     }
 }
 
+enum class Route { HOME, CONNECTION, BACKGROUND, APPEARANCE, PRIVACY }
+
+/** Live, non-persisted device state shown by the UI. */
+data class Live(
+    val perms: PermissionState,
+    val bgMode: BackgroundSession.Mode? = null,
+    val bgDisplay: Int = -1,
+    val helper: Boolean = false,
+)
+
+/** UI-side copy of the settings, so changes recompose immediately. */
+class UiSettings(val prefs: Prefs) {
+    var theme by mutableStateOf(prefs.themeMode)
+    var dynamic by mutableStateOf(prefs.dynamicColor)
+    var accent by mutableStateOf(Accent.of(prefs.accent))
+}
+
+fun bgSession(): BackgroundSession? =
+    DroidHandAccessibilityService.instance?.let { s -> runCatching { s.bg }.getOrNull() }
+
+private fun readLive(ctx: Context): Live {
+    val bg = bgSession()
+    return Live(PermissionState.read(ctx), bg?.mode, bg?.displayId ?: -1, ShellBridge.attached)
+}
+
 @Composable
-private fun Screen(prefs: Prefs, ctx: Context) {
-    var url by remember { mutableStateOf(prefs.relayUrl) }
-    var token by remember { mutableStateOf(prefs.token) }
-    var showToken by remember { mutableStateOf(false) }
-    var suggestions by remember { mutableStateOf(prefs.suggestionLogging) }
-    var bgMode by remember { mutableStateOf(prefs.bgMode) }
-    var opacity by remember { mutableStateOf(prefs.windowOpacity) }
+private fun App(prefs: Prefs) {
+    val ctx = LocalContext.current
+    val ui = remember { UiSettings(prefs) }
+    var route by rememberSaveable { mutableStateOf(Route.HOME) }
+    var live by remember { mutableStateOf(readLive(ctx)) }
+    val relay by RelayClient.state.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text("DroidHand", style = MaterialTheme.typography.headlineSmall)
-        Text("Agent control of this phone. Only enable if you set this up yourself.")
+    // Permissions and background state change outside the app: refresh while visible.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) { live = readLive(ctx); delay(1500) }
+        }
+    }
 
-        OutlinedTextField(
-            value = url,
-            onValueChange = { url = it; prefs.relayUrl = it },
-            label = { Text("Relay URL (ws(s)://<nuc-tailscale-ip>:8787)") },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = token,
-            onValueChange = { token = it; prefs.token = it },
-            label = { Text("Token") },
-            visualTransformation = if (showToken) VisualTransformation.None else PasswordVisualTransformation(),
-            singleLine = true,
-            trailingIcon = {
-                IconButton(onClick = { showToken = !showToken }) {
-                    Icon(
-                        painter = painterResource(if (showToken) R.drawable.ic_eye_off else R.drawable.ic_eye),
-                        contentDescription = if (showToken) "Hide token" else "Show token",
-                    )
-                }
-            },
-            // Always a password field for accessibility: even when shown on screen,
-            // the agent's snapshot reads it as masked.
-            modifier = Modifier.fillMaxWidth().semantics { password() },
-        )
-
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Switch(checked = suggestions, onCheckedChange = {
-                suggestions = it
-                prefs.suggestionLogging = it
-                RelayClient.current?.sendDeviceInfo()
-            })
-            Text("Allow the agent to log feature suggestions (off by default)")
+    DroidHandTheme(ui.theme, ui.dynamic, ui.accent) {
+        val dark = isAppDark(ui.theme)
+        val view = LocalView.current
+        SideEffect {
+            val window = (view.context as? android.app.Activity)?.window ?: return@SideEffect
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !dark
+                isAppearanceLightNavigationBars = !dark
+            }
+            if (Build.VERSION.SDK_INT >= 29) window.isNavigationBarContrastEnforced = false
         }
 
-        Text("Background window", style = MaterialTheme.typography.titleMedium)
-        Text(
-            "Where the agent works while you keep using the phone.",
-            style = MaterialTheme.typography.bodySmall,
-        )
-        listOf(
-            Prefs.BG_AGENT to "Let the agent decide (both available)",
-            Prefs.BG_NATIVE to "Native: works with debugging OFF; system-drawn window (drag its handle to the X to close; cannot be hidden)",
-            Prefs.BG_OWN to "Own window: opaque/translucent, resizable, can be hidden while the agent works; needs debugging ON during the session",
-        ).forEach { (key, label) ->
-            Row(
-                modifier = Modifier.fillMaxWidth().selectable(selected = bgMode == key, onClick = { bgMode = key; prefs.bgMode = key }),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RadioButton(selected = bgMode == key, onClick = null)
-                Text(label, modifier = Modifier.padding(start = 8.dp))
+        BackHandler(enabled = route != Route.HOME) { route = Route.HOME }
+        AnimatedContent(
+            targetState = route,
+            transitionSpec = {
+                val forward = targetState != Route.HOME
+                (slideInHorizontally { w -> if (forward) w / 6 else -w / 6 } + fadeIn()) togetherWith
+                    (slideOutHorizontally { w -> if (forward) -w / 6 else w / 6 } + fadeOut())
+            },
+            label = "route",
+        ) { r ->
+            val back = { route = Route.HOME }
+            when (r) {
+                Route.HOME -> HomeScreen(prefs, ui, live, relay, onOpen = { route = it }, refresh = { live = readLive(ctx) })
+                Route.CONNECTION -> ConnectionScreen(prefs, relay, back)
+                Route.BACKGROUND -> BackgroundScreen(prefs, live, back)
+                Route.APPEARANCE -> AppearanceScreen(ui, back)
+                Route.PRIVACY -> PrivacyScreen(prefs, back)
             }
         }
-        Text("Own window opacity: ${(opacity * 100).toInt()}%" + if (opacity >= 0.99f) " (opaque)" else "")
-        Slider(
-            value = opacity,
-            onValueChange = {
-                prefs.windowOpacity = it
-                opacity = prefs.windowOpacity // snaps to 100% near the end
-                runCatching { work.alberton.droidhand.a11y.DroidHandAccessibilityService.instance?.bg?.setOpacity(it) }
-            },
-            valueRange = 0.3f..1f,
-        )
-
-        Button(onClick = { ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }, modifier = Modifier.fillMaxWidth()) {
-            Text("Open Accessibility settings")
-        }
-        Button(onClick = { prefs.serviceEnabled = true; RelayService.start(ctx) }, modifier = Modifier.fillMaxWidth()) {
-            Text("Start agent service")
-        }
-        Button(onClick = { prefs.serviceEnabled = false; RelayService.stop(ctx) }, modifier = Modifier.fillMaxWidth()) {
-            Text("Disconnect (panic)")
-        }
-
-        Text(
-            "Grant privileged settings once via ADB:\n" +
-                "pm grant work.alberton.droidhand android.permission.WRITE_SECURE_SETTINGS",
-            style = MaterialTheme.typography.bodySmall,
-        )
     }
 }

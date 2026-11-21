@@ -36,7 +36,34 @@ class Prefs(context: Context) {
         get() = sp.getFloat(KEY_WINDOW_OPACITY, 1f)
         set(v) = sp.edit().putFloat(KEY_WINDOW_OPACITY, if (v >= 0.97f) 1f else v.coerceIn(0.3f, 1f)).apply() // snap to opaque
 
+    /** App theme: "system", "light" or "dark". */
+    var themeMode: String
+        get() = sp.getString(KEY_THEME, THEME_SYSTEM) ?: THEME_SYSTEM
+        set(v) = sp.edit().putString(KEY_THEME, v).apply()
+
+    /** Material You wallpaper colors (Android 12+). Off: our own palette + accent. */
+    var dynamicColor: Boolean
+        get() = sp.getBoolean(KEY_DYNAMIC, false)
+        set(v) = sp.edit().putBoolean(KEY_DYNAMIC, v).apply()
+
+    /** Accent key, see ui.theme.Accent. */
+    var accent: String
+        get() = sp.getString(KEY_ACCENT, "indigo") ?: "indigo"
+        set(v) = sp.edit().putString(KEY_ACCENT, v).apply()
+
+    /** "" = follow the system, else a language tag ("en", "pt-BR"). Android 13+ keeps its own copy. */
+    var language: String
+        get() = sp.getString(KEY_LANGUAGE, "") ?: ""
+        set(v) = sp.edit().putString(KEY_LANGUAGE, v).apply()
+
     companion object {
+        const val THEME_SYSTEM = "system"
+        const val THEME_LIGHT = "light"
+        const val THEME_DARK = "dark"
+        private const val KEY_THEME = "theme_mode"
+        private const val KEY_DYNAMIC = "dynamic_color"
+        private const val KEY_ACCENT = "accent"
+        private const val KEY_LANGUAGE = "language"
         const val BG_AGENT = "agent"
         const val BG_NATIVE = "native"
         const val BG_OWN = "own"

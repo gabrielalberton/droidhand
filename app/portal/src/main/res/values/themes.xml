@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window/splash only; the UI itself is Compose (ui/theme/Theme.kt). -->
+    <style name="Theme.DroidHand" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/dh_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowSplashScreenBackground">@color/dh_bg</item>
+    </style>
+    <color name="dh_bg">#F6F7F9</color>
+</resources>

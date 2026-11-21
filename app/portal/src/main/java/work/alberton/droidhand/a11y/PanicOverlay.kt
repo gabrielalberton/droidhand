@@ -74,7 +74,7 @@ class PanicOverlay(private val service: AccessibilityService, private val onPani
                 setStroke(dp(1f), Color.WHITE)
             }
             alpha = 0.45f
-            contentDescription = "Stop DroidHand agent"
+            contentDescription = service.getString(work.alberton.droidhand.R.string.cd_panic)
         }
         val lp = WindowManager.LayoutParams(
             size, size,
