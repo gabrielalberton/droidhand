@@ -2,14 +2,16 @@ import { appendFileSync, mkdirSync, readFileSync, existsSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 
-export type SuggestionCategory =
-  | "feature"
-  | "capability"
-  | "harness"
-  | "optimization"
-  | "routine"
-  | "other";
+/** Allowed values of `suggest_feature.category`. */
+export const SUGGESTION_CATEGORIES = ["feature", "capability", "harness", "optimization", "routine", "other"] as const;
 
+export type SuggestionCategory = (typeof SUGGESTION_CATEGORIES)[number];
+
+export function isSuggestionCategory(v: unknown): v is SuggestionCategory {
+  return typeof v === "string" && (SUGGESTION_CATEGORIES as readonly string[]).includes(v);
+}
+
+/** One logged suggestion (a line of `suggestions.jsonl`). */
 export interface Suggestion {
   id: string;
   ts: string;
@@ -24,6 +26,7 @@ export interface Suggestion {
   context?: string;
 }
 
+/** Input to {@link SuggestionStore.add}; defaults fill the rest. */
 export interface NewSuggestion {
   title: string;
   detail: string;
@@ -34,7 +37,7 @@ export interface NewSuggestion {
 }
 
 /**
- * NUC-side mirror of the feature-suggestion log. The on-device app is the source
+ * Host-side mirror of the feature-suggestion log. The on-device app is the source
  * of truth and owns the default-OFF toggle; this mirror makes suggestions easy to
  * read and export (and gives forkers the same benefit out of the box).
  */
@@ -45,6 +48,7 @@ export class SuggestionStore {
     this.file = join(dir, "suggestions.jsonl");
   }
 
+  /** Append a suggestion (default category "feature", priority clamped to 1..5, default 3). */
   add(s: NewSuggestion): Suggestion {
     const entry: Suggestion = {
       id: randomUUID(),
@@ -60,6 +64,7 @@ export class SuggestionStore {
     return entry;
   }
 
+  /** All logged suggestions, oldest first. */
   list(): Suggestion[] {
     if (!existsSync(this.file)) return [];
     return readFileSync(this.file, "utf8")

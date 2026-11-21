@@ -1,12 +1,15 @@
 import { WebSocket, type RawData } from "ws";
-import type { DeviceInfo } from "./protocol.js";
+import { encodeFrame, parseFrame, type DeviceInfo } from "../protocol.js";
+
+/** A canned command handler; its return value becomes the result data, a throw becomes `ok: false`. */
+export type MockHandler = (args: Record<string, unknown>) => unknown;
 
 export interface MockPhoneOptions {
   url: string;
   token: string;
   device?: Partial<DeviceInfo>;
   /** Override or add command handlers. Return value becomes the result data. */
-  handlers?: Record<string, (args: Record<string, unknown>) => unknown>;
+  handlers?: Record<string, MockHandler>;
 }
 
 export interface MockPhone {
@@ -18,9 +21,9 @@ export interface MockPhone {
 }
 
 /**
- * A stand-in for the Portal app: connects to the relay, authenticates, and
- * answers commands with canned data. Used by tests and for manual end-to-end runs
- * before the real Android app exists.
+ * A stand-in for the Android app: connects to the relay, authenticates, and
+ * answers commands with canned data (unknown tools echo their args). Used by
+ * tests and for manual end-to-end runs without a phone.
  */
 export function startMockPhone(opts: MockPhoneOptions): Promise<MockPhone> {
   const device: DeviceInfo = {
@@ -32,7 +35,7 @@ export function startMockPhone(opts: MockPhoneOptions): Promise<MockPhone> {
   };
   const stored: unknown[] = [];
 
-  const defaults: Record<string, (args: Record<string, unknown>) => unknown> = {
+  const defaults: Record<string, MockHandler> = {
     screen_snapshot: () => ({ windows: [{ package: "com.example", nodes: [{ ref: "@1", role: "button", text: "OK" }] }] }),
     get_device_info: () => ({ model: device.model, androidSdk: device.androidSdk }),
     tap: (a) => ({ tapped: a }),
@@ -46,23 +49,17 @@ export function startMockPhone(opts: MockPhoneOptions): Promise<MockPhone> {
 
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(opts.url);
-    ws.on("open", () => ws.send(JSON.stringify({ type: "hello", token: opts.token, device })));
+    ws.on("open", () => ws.send(encodeFrame({ type: "hello", token: opts.token, device })));
     ws.on("error", reject);
     ws.on("message", (raw: RawData) => {
-      let frame: { type?: string; id?: string; tool?: string; args?: Record<string, unknown> };
+      const frame = parseFrame(raw.toString());
+      if (frame?.type !== "cmd") return;
+      const handler = handlers[frame.tool];
       try {
-        frame = JSON.parse(raw.toString());
-      } catch {
-        return;
-      }
-      if (frame.type === "cmd" && frame.id && frame.tool) {
-        const handler = handlers[frame.tool];
-        try {
-          const data = handler ? handler(frame.args ?? {}) : { echo: frame.tool, args: frame.args };
-          ws.send(JSON.stringify({ type: "result", id: frame.id, ok: true, data }));
-        } catch (err) {
-          ws.send(JSON.stringify({ type: "result", id: frame.id, ok: false, error: String(err) }));
-        }
+        const data = handler ? handler(frame.args ?? {}) : { echo: frame.tool, args: frame.args };
+        ws.send(encodeFrame({ type: "result", id: frame.id, ok: true, data }));
+      } catch (err) {
+        ws.send(encodeFrame({ type: "result", id: frame.id, ok: false, error: String(err) }));
       }
     });
     // Resolve shortly after hello is sent so the relay has registered the session.
@@ -71,7 +68,7 @@ export function startMockPhone(opts: MockPhoneOptions): Promise<MockPhone> {
         () =>
           resolve({
             storedSuggestions: stored,
-            sendEvent: (event: string, payload: unknown) => ws.send(JSON.stringify({ type: "event", event, payload })),
+            sendEvent: (event: string, payload: unknown) => ws.send(encodeFrame({ type: "event", event, payload })),
             close: () =>
               new Promise<void>((res) => {
                 ws.once("close", () => res());

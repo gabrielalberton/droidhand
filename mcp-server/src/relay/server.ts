@@ -1,6 +1,9 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import { randomUUID } from "node:crypto";
-import { parseFrame, type DeviceInfo, type Frame } from "../protocol.js";
+import { CloseCode, encodeFrame, parseFrame, type DeviceInfo, type Frame } from "../protocol.js";
+
+/** Grace period for the first (hello) frame before the socket is closed. */
+export const AUTH_TIMEOUT_MS = 5000;
 
 interface Pending {
   resolve: (data: unknown) => void;
@@ -12,9 +15,9 @@ export type EventHandler = (event: string, payload: unknown) => void;
 
 /**
  * Relay: a WebSocket server the phone dials into (outbound-only from the phone).
- * Binds to the configured host (loopback or the Tailscale IP) and authenticates
- * the single phone session with a shared bearer token. Correlates cmd→result and
- * fans out device events.
+ * Binds to the configured host (loopback or a private-network IP) and
+ * authenticates the single phone session with a shared bearer token. Correlates
+ * cmd→result and fans out device events. See `protocol.ts` for the frames.
  */
 export class Relay {
   private wss: WebSocketServer | null = null;
@@ -41,27 +44,27 @@ export class Relay {
   }
 
   async stop(): Promise<void> {
-    for (const p of this.pending.values()) {
-      clearTimeout(p.timer);
-      p.reject(new Error("relay shutting down"));
-    }
-    this.pending.clear();
+    this.rejectAllPending("relay shutting down");
     this.phone?.close();
     this.phone = null;
     await new Promise<void>((res) => (this.wss ? this.wss.close(() => res()) : res()));
     this.wss = null;
   }
 
+  /** True while an authenticated phone session is open. */
   get connected(): boolean {
     return this.phone !== null && this.phone.readyState === WebSocket.OPEN;
   }
 
+  /** What the phone reported in `hello` (updated by `device_info` events); null when disconnected. */
   get deviceInfo(): DeviceInfo | null {
     return this.device;
   }
 
-  onEvent(handler: EventHandler): void {
+  /** Subscribe to device events. Returns an unsubscribe function. */
+  onEvent(handler: EventHandler): () => void {
     this.eventHandlers.add(handler);
+    return () => this.eventHandlers.delete(handler);
   }
 
   /** The actual bound port (useful when port 0 was requested in tests). */
@@ -71,7 +74,7 @@ export class Relay {
     return null;
   }
 
-  /** Send a tool command to the phone and await its result. */
+  /** Send a tool command to the phone and await its result data (rejects with the phone's error). */
   dispatch(tool: string, args: Record<string, unknown>): Promise<unknown> {
     const ws = this.phone;
     if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -84,20 +87,28 @@ export class Relay {
         reject(new Error(`timeout after ${this.cmdTimeoutMs}ms waiting for '${tool}'`));
       }, this.cmdTimeoutMs);
       this.pending.set(id, { resolve, reject, timer });
-      ws.send(JSON.stringify({ type: "cmd", id, tool, args }));
+      ws.send(encodeFrame({ type: "cmd", id, tool, args }));
     });
   }
 
   /** Sever the phone session immediately (panic / kill switch). */
   disconnectPhone(): void {
-    this.phone?.close(4000, "disconnected by operator");
+    this.phone?.close(CloseCode.Replaced, "disconnected by operator");
     this.phone = null;
     this.device = null;
   }
 
+  private rejectAllPending(reason: string): void {
+    for (const p of this.pending.values()) {
+      clearTimeout(p.timer);
+      p.reject(new Error(reason));
+    }
+    this.pending.clear();
+  }
+
   private onConnection(ws: WebSocket): void {
     // The first frame must be a valid hello within a short window, or we close.
-    const authTimer = setTimeout(() => ws.close(4001, "auth timeout"), 5000);
+    const authTimer = setTimeout(() => ws.close(CloseCode.AuthTimeout, "auth timeout"), AUTH_TIMEOUT_MS);
     let authed = false;
 
     ws.on("message", (raw: RawData) => {
@@ -106,17 +117,17 @@ export class Relay {
 
       if (!authed) {
         if (frame.type !== "hello" || frame.token !== this.token || this.token === "") {
-          ws.close(4003, "unauthorized");
+          ws.close(CloseCode.Unauthorized, "unauthorized");
           return;
         }
         clearTimeout(authTimer);
         authed = true;
         // Replace any previous phone (last writer wins; single session).
-        if (this.phone && this.phone !== ws) this.phone.close(4000, "replaced by new session");
+        if (this.phone && this.phone !== ws) this.phone.close(CloseCode.Replaced, "replaced by new session");
         this.phone = ws;
         this.device = frame.device;
         // Lets the app show "connected" only once the token was accepted.
-        ws.send(JSON.stringify({ type: "event", event: "welcome", payload: null }));
+        ws.send(encodeFrame({ type: "event", event: "welcome", payload: null }));
         return;
       }
 
@@ -128,16 +139,12 @@ export class Relay {
       if (this.phone === ws) {
         this.phone = null;
         this.device = null;
-        for (const [id, p] of this.pending) {
-          clearTimeout(p.timer);
-          p.reject(new Error("device disconnected"));
-          this.pending.delete(id);
-        }
+        this.rejectAllPending("device disconnected");
       }
     });
 
     ws.on("error", () => {
-      /* close handler does cleanup */
+      /* the close handler does the cleanup */
     });
   }
 
@@ -152,11 +159,11 @@ export class Relay {
     } else if (frame.type === "event") {
       // The phone re-sends its device info when a device-side toggle changes.
       if (frame.event === "device_info" && frame.payload && typeof frame.payload === "object") {
-        this.device = { ...(this.device ?? { suggestionLogging: false }), ...(frame.payload as DeviceInfo) };
+        this.device = { ...(this.device ?? { suggestionLogging: false }), ...(frame.payload as Partial<DeviceInfo>) };
       }
       for (const h of this.eventHandlers) h(frame.event, frame.payload);
     } else if (frame.type === "ping") {
-      this.phone?.send(JSON.stringify({ type: "pong" }));
+      this.phone?.send(encodeFrame({ type: "pong" }));
     }
   }
 }

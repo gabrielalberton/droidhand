@@ -1,10 +1,17 @@
 import { execFile } from "node:child_process";
 
+/**
+ * Host-side adb helpers for the `own_helper_*` tools: start/stop the app's shell
+ * helper (`app_process` running ShellMain from the installed APK), which enables
+ * the "own" background-window method.
+ */
+
 const PKG = "work.alberton.droidhand";
 const MAIN = "work.alberton.droidhand.shell.ShellMain";
 /** Bracket trick: the pattern does not match the pkill command line itself. */
 const MAIN_PATTERN = "work.alberton.droidhand.shell.Shell[M]ain";
 
+/** Run adb and resolve with stdout (mDNS auto-connect disabled so serials stay predictable). */
 function run(adb: string, args: string[], timeoutMs = 15000): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(adb, args, { timeout: timeoutMs, env: { ...process.env, ADB_MDNS_AUTO_CONNECT: "0" } }, (err, stdout, stderr) => {
@@ -29,6 +36,7 @@ async function pickSerial(adb: string, configured: string): Promise<string> {
   throw new Error("no phone reachable over adb: turn on wireless debugging (set_setting global/adb_wifi_enabled=1) and make sure the NUC is paired");
 }
 
+/** (Re)start the shell helper detached on the phone; resolves with the serial used. */
 export async function startShellHelper(adb: string, configuredSerial: string): Promise<{ serial: string }> {
   const serial = await pickSerial(adb, configuredSerial);
   const apk = (await run(adb, ["-s", serial, "shell", "pm", "path", PKG])).split("\n")[0]?.replace("package:", "").trim();
@@ -40,6 +48,7 @@ export async function startShellHelper(adb: string, configuredSerial: string): P
   return { serial };
 }
 
+/** Kill the shell helper on the phone (no-op if it is not running). */
 export async function stopShellHelper(adb: string, configuredSerial: string): Promise<void> {
   const serial = await pickSerial(adb, configuredSerial);
   await run(adb, ["-s", serial, "shell", `pkill -f ${MAIN_PATTERN}; true`]);

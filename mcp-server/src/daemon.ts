@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { loadConfig } from "./config.js";
-import { Core } from "./core.js";
-import { startControlServer } from "./control.js";
+import { Core } from "./core/core.js";
+import { startControlServer } from "./control/server.js";
 
 /**
- * The DroidHand relay daemon: one per NUC. Owns the phone-facing relay (bound to
- * the Tailscale IP) and a loopback control server that per-session MCP adapters
- * connect to. Run as a user systemd service (see deploy/droidhand-relay.service).
+ * Entry point `droidhand-relay` (dist/daemon.js): the relay daemon, one per host.
+ * Owns the phone-facing relay and a loopback control server that per-session
+ * MCP adapters connect to. Meant to run as a user systemd service
+ * (see deploy/droidhand-relay.service).
  */
 async function main(): Promise<void> {
   const cfg = loadConfig();
@@ -20,7 +21,7 @@ async function main(): Promise<void> {
     `[droidhand-relay] phone relay on ${cfg.relayHost}:${cfg.relayPort}; control on ${cfg.controlHost}:${cfg.controlPort}\n`,
   );
 
-  const shutdown = async () => {
+  const shutdown = async (): Promise<void> => {
     await ctrl.close();
     await core.stop();
     process.exit(0);

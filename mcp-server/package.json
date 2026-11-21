@@ -1,23 +1,39 @@
 {
   "name": "droidhand-mcp-server",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "DroidHand MCP server + relay — exposes a personal Android phone to AI agents over MCP.",
+  "description": "DroidHand MCP server + relay — lets AI agents control an Android phone over MCP.",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gabrielalberton/droidhand.git",
+    "directory": "mcp-server"
+  },
+  "homepage": "https://github.com/gabrielalberton/droidhand",
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "droidhand-mcp": "dist/index.js",
     "droidhand-relay": "dist/daemon.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json",
     "relay": "node dist/daemon.js",
     "mcp": "node dist/index.js",
-    "mock-phone": "node --import tsx src/mock-phone-cli.ts",
+    "mock-phone": "node --import tsx src/dev/mock-phone-cli.ts",
+    "docs:tools": "node --import tsx scripts/gen-tools-doc.ts",
     "test": "node --import tsx --test test/*.test.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "ws": "^8.18.0",
     "zod": "^3.23.8"
   },

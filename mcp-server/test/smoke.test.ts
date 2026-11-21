@@ -2,16 +2,17 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { CATALOG } from "../src/catalog.js";
 
 /**
- * Boots the built server over stdio exactly as Claude Code / Codex would, lists
- * its tools, and calls one with no phone connected to confirm the error path.
- * Requires `npm run build` first (uses dist/index.js).
+ * Boots the adapter entry point over stdio as Claude Code / Codex would (from
+ * source via tsx, so no build is needed), lists its tools, and calls one with no
+ * daemon running to confirm the error path.
  */
 test("MCP server boots over stdio and exposes the tool catalog", async () => {
   const transport = new StdioClientTransport({
     command: "node",
-    args: ["dist/index.js"],
+    args: ["--import", "tsx", "src/index.ts"],
     env: {
       PATH: process.env.PATH ?? "",
       DROIDHAND_TOKEN: "smoke-token",
@@ -28,7 +29,7 @@ test("MCP server boots over stdio and exposes the tool catalog", async () => {
     assert.ok(names.includes("tap"), "tap tool present");
     assert.ok(names.includes("suggest_feature"), "suggest_feature tool present");
     assert.ok(names.includes("adb_session_begin"), "adb_session_begin tool present");
-    assert.ok(tools.length >= 20, `expected a full catalog, got ${tools.length}`);
+    assert.equal(tools.length, CATALOG.length, "every catalog tool is registered");
 
     // With no relay daemon running, a forwarded tool degrades gracefully (non-fatal error).
     const res = await client.callTool({ name: "tap", arguments: { x: 1, y: 1 } });
