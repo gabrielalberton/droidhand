@@ -25,7 +25,12 @@ import java.util.concurrent.TimeUnit
  *   while it runs) rendering into our own [MiniWindow]: opaque/translucent, resizable,
  *   hideable while the agent keeps working, with touch passthrough.
  */
-class BackgroundSession(private val ctx: Context, private val onActiveChanged: (Boolean) -> Unit) {
+class BackgroundSession(
+    private val ctx: Context,
+    private val onActiveChanged: (Boolean) -> Unit,
+    /** Main thread: makes sure the stop button is on screen; true if it is. */
+    private val ensureStopButton: () -> Boolean,
+) {
     enum class Mode { NATIVE, OWN }
 
     private val main = Handler(Looper.getMainLooper())
@@ -93,7 +98,41 @@ class BackgroundSession(private val ctx: Context, private val onActiveChanged: (
             }
         }
         onActiveChanged(true)
+        ensureIndicators()?.let { why ->
+            throw IllegalStateException("$INDICATORS_ERROR ($why). The background session was closed.")
+        }
         return status().put("forcedByUser", forced)
+    }
+
+    /**
+     * The agent may only work in the background while the user can see it: the stop
+     * button plus the window itself (own, shown), the eye bubble (own, hidden) or the
+     * handle (native). Missing ones are re-added; a hidden window whose eye cannot be
+     * shown is shown instead. If they still cannot be shown, the session is CLOSED.
+     * Returns null when everything is on screen, else why not.
+     */
+    fun ensureIndicators(): String? {
+        val m = mode ?: return null
+        val result = java.util.concurrent.atomic.AtomicReference<String?>("timed out checking the on-screen controls")
+        onMain {
+            result.set(when {
+                !ensureStopButton() -> "the stop button could not be shown"
+                m == Mode.NATIVE -> if (bubbles.ensureNativeHandle()) null else "the window handle could not be shown"
+                hidden && bubbles.ensureEye() -> null
+                hidden -> {
+                    // No eye: never keep working invisibly; show the window instead.
+                    bubbles.hideEye(); hidden = false
+                    if (window.ensureShown()) { helpPending?.let { window.setBanner(it) }; null }
+                    else "neither the eye bubble nor the window could be shown"
+                }
+                else -> if (window.ensureShown()) null else "the background window could not be shown"
+            })
+        }
+        val why = result.get() ?: return null
+        android.util.Log.w("DroidHand", "background indicators missing: $why")
+        close("indicators not visible: $why")
+        main.post { Toast.makeText(ctx, work.alberton.droidhand.R.string.bg_closed_no_controls, Toast.LENGTH_LONG).show() }
+        return why
     }
 
     fun close(reason: String) {
@@ -194,5 +233,7 @@ class BackgroundSession(private val ctx: Context, private val onActiveChanged: (
 
     companion object {
         const val OVERLAY_KEY = "overlay_display_devices"
+        const val INDICATORS_ERROR = "indicators_not_visible: the on-screen controls (stop button / eye / window) " +
+            "could not be shown, so the agent must not work in the background"
     }
 }

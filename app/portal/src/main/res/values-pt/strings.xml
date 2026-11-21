@@ -126,6 +126,7 @@
     <string name="float_help_done">(toque aqui quando terminar)</string>
     <string name="float_agent_stopped">DroidHand: agente parado</string>
     <string name="cd_show_bg">Mostrar a janela de fundo do DroidHand</string>
+    <string name="bg_closed_no_controls">O DroidHand fechou a janela de fundo: não foi possível mostrar os controles na tela.</string>
     <string name="cd_hide_bg">Esconder a janela de fundo (o agente continua trabalhando)</string>
     <string name="cd_back_bg">Voltar (janela de fundo)</string>
     <string name="cd_resize_bg">Redimensionar a janela de fundo</string>

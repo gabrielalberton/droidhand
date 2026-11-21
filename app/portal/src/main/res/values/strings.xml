@@ -133,6 +133,7 @@
     <string name="float_help_done">(tap here when done)</string>
     <string name="float_agent_stopped">DroidHand: agent stopped</string>
     <string name="cd_show_bg">Show DroidHand background window</string>
+    <string name="bg_closed_no_controls">DroidHand closed the background window: its on-screen controls could not be shown.</string>
     <string name="cd_hide_bg">Hide background window (the agent keeps working)</string>
     <string name="cd_back_bg">Back (background window)</string>
     <string name="cd_resize_bg">Resize background window</string>

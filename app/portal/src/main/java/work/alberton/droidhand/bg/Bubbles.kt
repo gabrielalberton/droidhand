@@ -53,6 +53,9 @@ class Bubbles(private val ctx: Context, private val session: BackgroundSession) 
 
     fun hideEye() { eye?.let { runCatching { wm.removeView(it) } }; eye = null }
 
+    /** (Re)adds the eye if it is not on screen; true if it is visible. */
+    fun ensureEye(): Boolean { if (eye?.parent == null) { hideEye(); showEye() }; return eye?.parent != null }
+
     // ---- Close target ("X" bubble at the bottom while dragging) ----
     fun showTarget() {
         if (target != null) return
@@ -127,6 +130,12 @@ class Bubbles(private val ctx: Context, private val session: BackgroundSession) 
     }
 
     fun hideNativeHandle() { handle?.let { runCatching { wm.removeView(it) } }; handle = null }
+
+    /** (Re)adds the native-window handle if it is not on screen; true if it is visible. */
+    fun ensureNativeHandle(): Boolean {
+        if (handle?.parent == null) { hideNativeHandle(); showNativeHandle() }
+        return handle?.parent != null
+    }
 
     fun hideAll() { hideEye(); hideTarget(); hideNativeHandle() }
 }

@@ -40,7 +40,7 @@ class MiniWindow(private val ctx: Context, private val session: BackgroundSessio
     private var winY = -1
     private var winW = -1
 
-    val visible: Boolean get() = root != null
+    val visible: Boolean get() = root?.parent != null
 
     private val titleH get() = ctx.dp(34f)
     private fun contentH(w: Int) = w * session.height / session.width
@@ -152,6 +152,9 @@ class MiniWindow(private val ctx: Context, private val session: BackgroundSessio
         root?.let { runCatching { wm.removeView(it) } } // TextureView destroyed -> surface detached
         root = null; texture = null; title = null; banner = null
     }
+
+    /** (Re)adds the window if it is not on screen; true if it is visible. */
+    fun ensureShown(): Boolean { if (!visible) { hide(); show() }; return visible }
 
     fun setOpacity(a: Float) { root?.alpha = a }
 

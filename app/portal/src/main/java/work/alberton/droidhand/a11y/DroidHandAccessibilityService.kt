@@ -48,7 +48,11 @@ class DroidHandAccessibilityService : AccessibilityService() {
         gate = MainScreenGate(this)
         stopButton = StopButton(this) { userStop() }
         // While a background session exists the stop button stays on screen.
-        bg = work.alberton.droidhand.bg.BackgroundSession(this) { active -> stopButton.setPinned(active) }
+        bg = work.alberton.droidhand.bg.BackgroundSession(
+            this,
+            onActiveChanged = { active -> stopButton.setPinned(active) },
+            ensureStopButton = { stopButton.ensureOnScreen() },
+        )
         // The relay comes up with the accessibility service (also after reboots and
         // app updates), as long as the operator has not disconnected it.
         val prefs = work.alberton.droidhand.data.Prefs(this)

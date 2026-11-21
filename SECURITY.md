@@ -19,6 +19,7 @@ Include: affected component (app / relay / mcp-server), version/commit, reproduc
 - **Confirmation gates.** Sensitive and destructive actions require an on-device tap; the agent alone cannot authorize them (prompt-injection resistance).
 - **Kill switch.** Persistent notification button + Quick Settings tile + `panic_disconnect` end the session and any ADB window immediately.
 - **Stop button.** A small floating red button, visible while the agent acts, cancels the current action and tells the agent (`stopped_by_user`) without disconnecting.
+- **No invisible background work.** Tools on a background display run only while its on-screen controls are visible (Stop button + the window, the eye bubble when hidden, or the handle for the native window). Missing controls are re-added; if that fails, the session is closed and the call fails with `indicators_not_visible`.
 - **Minimize exposure.** Debugging is off except during short, audited ADB-on-demand windows (default TTL 120s), always closed in a `finally`.
 - **Audit.** Append-only logs on both NUC and phone; secrets redacted.
 - **No telemetry. No cloud by default.**

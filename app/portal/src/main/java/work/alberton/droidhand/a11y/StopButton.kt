@@ -50,6 +50,15 @@ class StopButton(private val service: AccessibilityService, private val onStop: 
         }
     }
 
+    /** Really on screen (added to the window manager and not removed by the system). */
+    val isOnScreen: Boolean get() = view?.parent != null
+
+    /** Main thread only: put the button on screen if it is missing; true if it is visible. */
+    fun ensureOnScreen(): Boolean {
+        if (!isOnScreen) { view?.let { runCatching { wm.removeView(it) } }; view = null; show() }
+        return isOnScreen
+    }
+
     fun hide() {
         main.post {
             main.removeCallbacks(hideRunnable)

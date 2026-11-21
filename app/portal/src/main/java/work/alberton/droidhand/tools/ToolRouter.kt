@@ -52,6 +52,17 @@ class ToolRouter(context: Context) {
         val svc = DroidHandAccessibilityService.instance
         // Every tool may target a display: 0 = phone screen (default), N = background display.
         if (svc != null) svc.displayId = args.optInt("display", 0)
+        // Background display: only ours, and only while the user can see the controls.
+        val display = args.optInt("display", 0)
+        if (svc != null && display != 0) {
+            val bg = runCatching { svc.bg }.getOrNull()
+                ?: return ToolResult(false, error = "accessibility service not ready")
+            if (!bg.active || bg.displayId != display) return ToolResult(false, error =
+                "no_background_session: display $display is not an open DroidHand background display; call bg_open first")
+            bg.ensureIndicators()?.let { why -> return ToolResult(false, error =
+                "${work.alberton.droidhand.bg.BackgroundSession.INDICATORS_ERROR} ($why). The background session was closed; " +
+                    "do not continue there. Tell the user, or try bg_open again later.") }
+        }
         // Main screen while the user is using the phone: ask first (background windows never ask).
         if (svc != null && tool in MAIN_GATED && args.optInt("display", 0) == 0 && !args.has("bounds")) {
             val gate = runCatching { svc.gate }.getOrNull()
@@ -148,9 +159,18 @@ class ToolRouter(context: Context) {
             }
             "bg_close" -> withService(svc) { s -> s.bg.close("agent"); ToolResult(true, s.bg.status()) }
             "bg_hide" -> withService(svc) { s ->
-                if (s.bg.hide()) ToolResult(true, s.bg.status()) else ToolResult(false, error = "only the own-window method can be hidden")
+                if (!s.bg.hide()) return@withService ToolResult(false, error = "only the own-window method can be hidden")
+                s.bg.ensureIndicators()?.let { why -> return@withService ToolResult(false, error =
+                    "${work.alberton.droidhand.bg.BackgroundSession.INDICATORS_ERROR} ($why). The background session was closed.") }
+                // If the eye could not be shown the window stays visible (hidden=false in the status).
+                ToolResult(true, s.bg.status())
             }
-            "bg_show" -> withService(svc) { s -> s.bg.show(); ToolResult(true, s.bg.status()) }
+            "bg_show" -> withService(svc) { s ->
+                s.bg.show()
+                s.bg.ensureIndicators()?.let { why -> return@withService ToolResult(false, error =
+                    "${work.alberton.droidhand.bg.BackgroundSession.INDICATORS_ERROR} ($why). The background session was closed.") }
+                ToolResult(true, s.bg.status())
+            }
             "bg_status" -> withService(svc) { s -> ToolResult(true, s.bg.status()) }
             "request_user_help" -> withService(svc) { s -> ToolResult(true, s.bg.requestHelp(args.getString("message"))) }
             "global_action" -> withService(svc) {
