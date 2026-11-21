@@ -49,7 +49,7 @@
     <string name="nav_connection">Connection</string>
     <string name="nav_bg">Background window</string>
     <string name="nav_appearance">Appearance</string>
-    <string name="nav_privacy">Privacy</string>
+    <string name="nav_privacy">Privacy &amp; safety</string>
     <string name="footer_version">DroidHand %1$s · open source</string>
 
     <!-- Connection -->
@@ -105,6 +105,14 @@
     <string name="priv_token_note">The token field is always reported as a password to the agent, even when shown.</string>
     <string name="priv_audit_note">Every action is recorded in an append-only audit log on your computer.</string>
     <string name="priv_panic_note">The red floating button stops the agent instantly.</string>
+    <string name="priv_ask_main">Ask before using the main screen</string>
+    <string name="priv_ask_main_desc">If you are using the phone, the agent asks before tapping or typing on your screen. Background windows never ask.</string>
+    <string name="priv_ask_on">Asks before using your screen</string>
+    <string name="priv_ask_off">Acts on your screen without asking</string>
+    <string name="gate_title">Let the agent use your screen?</string>
+    <string name="gate_body">You are using the phone. The agent wants to tap and type on the main screen. The red button stops it anytime.</string>
+    <string name="gate_allow">Allow</string>
+    <string name="gate_deny">Not now</string>
     <string name="back">Back</string>
 
     <!-- Floating controls -->

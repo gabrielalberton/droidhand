@@ -35,6 +35,11 @@ class ToolRouter(context: Context) {
         val svc = DroidHandAccessibilityService.instance
         // Every tool may target a display: 0 = phone screen (default), N = background display.
         if (svc != null) svc.displayId = args.optInt("display", 0)
+        // Main screen while the user is using the phone: ask first (background windows never ask).
+        if (svc != null && tool in MAIN_GATED && args.optInt("display", 0) == 0 && !args.has("bounds")) {
+            val gate = runCatching { svc.gate }.getOrNull()
+            gate?.check()?.let { return ToolResult(false, error = it) }
+        }
         // Show the floating panic button whenever the agent acts on the screen.
         if (tool in ACTING && svc != null && runCatching { svc.panic }.isSuccess) svc.panic.bump()
         return when (tool) {
@@ -262,6 +267,12 @@ class ToolRouter(context: Context) {
         val ACTING = setOf(
             "tap", "long_press", "swipe", "scroll", "type_text", "key_event", "global_action",
             "go_home", "launch_app", "open_url", "set_setting", "bg_open", "request_user_help",
+        )
+
+        /** Actions that change what the user sees on the main screen. */
+        val MAIN_GATED = setOf(
+            "tap", "long_press", "swipe", "scroll", "type_text", "key_event", "global_action",
+            "go_home", "launch_app", "open_url",
         )
 
         val KEYCODES = mapOf(

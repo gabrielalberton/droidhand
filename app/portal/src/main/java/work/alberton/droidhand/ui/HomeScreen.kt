@@ -90,7 +90,8 @@ fun HomeScreen(
             SettingRow(R.drawable.ic_palette, stringResource(R.string.nav_appearance), appearanceSummary(ui),
                 onClick = { onOpen(Route.APPEARANCE) }) { Chevron() }
             RowDivider()
-            SettingRow(R.drawable.ic_shield, stringResource(R.string.nav_privacy), null,
+            SettingRow(R.drawable.ic_shield, stringResource(R.string.nav_privacy),
+                stringResource(if (prefs.askMainScreen) R.string.priv_ask_on else R.string.priv_ask_off),
                 onClick = { onOpen(Route.PRIVACY) }) { Chevron() }
         }
         Text(

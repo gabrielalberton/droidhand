@@ -151,7 +151,7 @@ export const CATALOG: ToolDef[] = [
 // Every phone tool may target a background display (0 = the user's screen, default).
 for (const t of CATALOG) {
   if (!t.local && !("display" in t.input)) {
-    t.input = { ...t.input, display: z.number().int().min(0).optional().describe("display id (0 = phone screen; bg_open id = background)") };
+    t.input = { ...t.input, display: z.number().int().min(0).optional().describe("display id (0 = phone screen; bg_open id = background). On 0, if the user is using the phone the app may ask them first: errors 'awaiting_user' (retry shortly) or 'user_declined' (use bg_open instead)") };
   }
 }
 

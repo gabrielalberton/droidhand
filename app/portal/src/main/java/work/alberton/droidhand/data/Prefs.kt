@@ -36,6 +36,11 @@ class Prefs(context: Context) {
         get() = sp.getFloat(KEY_WINDOW_OPACITY, 1f)
         set(v) = sp.edit().putFloat(KEY_WINDOW_OPACITY, if (v >= 0.97f) 1f else v.coerceIn(0.3f, 1f)).apply() // snap to opaque
 
+    /** Ask before the agent acts on the main screen while the user is using the phone. Default: on. */
+    var askMainScreen: Boolean
+        get() = sp.getBoolean(KEY_ASK_MAIN, true)
+        set(v) = sp.edit().putBoolean(KEY_ASK_MAIN, v).apply()
+
     /** App theme: "system", "light" or "dark". */
     var themeMode: String
         get() = sp.getString(KEY_THEME, THEME_SYSTEM) ?: THEME_SYSTEM
@@ -60,6 +65,7 @@ class Prefs(context: Context) {
         const val THEME_SYSTEM = "system"
         const val THEME_LIGHT = "light"
         const val THEME_DARK = "dark"
+        private const val KEY_ASK_MAIN = "ask_main_screen"
         private const val KEY_THEME = "theme_mode"
         private const val KEY_DYNAMIC = "dynamic_color"
         private const val KEY_ACCENT = "accent"

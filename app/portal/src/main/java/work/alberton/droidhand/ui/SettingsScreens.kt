@@ -325,8 +325,15 @@ private fun Segmented(options: List<Pair<String, String>>, selected: String, onS
 @Composable
 fun PrivacyScreen(prefs: Prefs, onBack: () -> Unit) {
     var suggestions by remember { mutableStateOf(prefs.suggestionLogging) }
+    var ask by remember { mutableStateOf(prefs.askMainScreen) }
     Page(stringResource(R.string.nav_privacy), onBack) {
         Card {
+            SettingRow(R.drawable.ic_window, stringResource(R.string.priv_ask_main), stringResource(R.string.priv_ask_main_desc),
+                onClick = { ask = !ask; prefs.askMainScreen = ask }) {
+                Spacer(Modifier.width(12.dp))
+                Switch(checked = ask, onCheckedChange = { ask = it; prefs.askMainScreen = it })
+            }
+            RowDivider()
             SettingRow(R.drawable.ic_lightbulb, stringResource(R.string.priv_suggestions), stringResource(R.string.priv_suggestions_desc),
                 onClick = {
                     suggestions = !suggestions; prefs.suggestionLogging = suggestions; RelayClient.current?.sendDeviceInfo()

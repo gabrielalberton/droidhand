@@ -39,8 +39,13 @@ class DroidHandAccessibilityService : AccessibilityService() {
     lateinit var bg: work.alberton.droidhand.bg.BackgroundSession
         private set
 
+    /** Asks before acting on the main screen while the user is using the phone. */
+    lateinit var gate: MainScreenGate
+        private set
+
     override fun onServiceConnected() {
         instance = this
+        gate = MainScreenGate(this)
         panic = PanicOverlay(this) { stopAgent() }
         // While a background session exists the panic button stays on screen.
         bg = work.alberton.droidhand.bg.BackgroundSession(this) { active -> panic.setPinned(active) }
@@ -54,6 +59,7 @@ class DroidHandAccessibilityService : AccessibilityService() {
 
     /** Kill switch: stop the agent session now and keep it off until the operator restarts it. */
     fun stopAgent() {
+        if (::gate.isInitialized) gate.reset()
         if (::bg.isInitialized) runCatching { bg.close("panic") }
         if (::panic.isInitialized) { panic.setPinned(false); panic.hide() }
         work.alberton.droidhand.service.RelayService.stop(this)
@@ -63,6 +69,7 @@ class DroidHandAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        if (::gate.isInitialized) gate.release()
         if (::bg.isInitialized) runCatching { bg.close("service destroyed") }
         if (::panic.isInitialized) panic.hide()
         if (instance === this) instance = null
