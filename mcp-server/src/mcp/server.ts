@@ -33,7 +33,8 @@ export function toCallToolResult(tool: string, res: ToolResult): CallToolResult 
     };
   }
   return {
-    content: [{ type: "text", text: JSON.stringify(res.ok ? res.data : { error: res.error }, null, 2) }],
+    // Tools that return no data (e.g. go_home) still need a text block: undefined is not JSON.
+    content: [{ type: "text", text: JSON.stringify(res.ok ? (res.data ?? { ok: true }) : { error: res.error }, null, 2) }],
     isError: !res.ok,
   };
 }

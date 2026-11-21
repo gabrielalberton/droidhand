@@ -84,3 +84,11 @@ test("MCP calls are forwarded with their args; a throwing caller yields a non-fa
     await client.close();
   }
 });
+
+test("toCallToolResult: a tool that returns no data still yields a valid text block", () => {
+  const res = toCallToolResult("go_home", { ok: true });
+  const block = res.content[0] as { type: string; text?: string };
+  assert.equal(block.type, "text");
+  assert.equal(typeof block.text, "string");
+  assert.deepEqual(JSON.parse(block.text!), { ok: true });
+});

@@ -19,6 +19,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
@@ -144,4 +146,22 @@ private fun Segmented(options: List<Pair<String, String>>, selected: String, onS
             ) { Text(label, maxLines = 1) }
         }
     }
+}
+
+/** One line of text that shrinks its font until it fits (e.g. "Português" in a narrow segment). */
+@Composable
+private fun FitText(text: String) {
+    val base = MaterialTheme.typography.labelLarge
+    var size by remember(text) { mutableStateOf(base.fontSize) }
+    var ready by remember(text) { mutableStateOf(false) }
+    Text(
+        text,
+        maxLines = 1,
+        softWrap = false,
+        style = base.copy(fontSize = size),
+        modifier = Modifier.drawWithContent { if (ready) drawContent() },
+        onTextLayout = { r ->
+            if (r.didOverflowWidth && size.value > 9f) size = (size.value * 0.92f).sp else ready = true
+        },
+    )
 }

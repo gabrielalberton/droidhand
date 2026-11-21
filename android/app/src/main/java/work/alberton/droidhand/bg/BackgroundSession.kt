@@ -86,7 +86,7 @@ class BackgroundSession(
                 displayId = helper.createDisplay("DroidHand", w, h, density, null)
                 mode = Mode.OWN; hidden = false
                 onMain { attachSurface(null) } // keep the display on until our window has a surface
-                onMain { window.show() }
+                onMain { window.show(); bubbles.showMinimize() }
             }
             Mode.NATIVE -> {
                 val before = dm.displays.map { it.displayId }.toSet()
@@ -107,7 +107,7 @@ class BackgroundSession(
     /**
      * The agent may only work in the background while the user can see it: the stop
      * button plus the window itself (own, shown), the eye bubble (own, hidden) or the
-     * handle (native). Missing ones are re-added; a hidden window whose eye cannot be
+     * bubble (native). Missing ones are re-added; a hidden window whose eye cannot be
      * shown is shown instead. If they still cannot be shown, the session is CLOSED.
      * Returns null when everything is on screen, else why not.
      */
@@ -122,10 +122,10 @@ class BackgroundSession(
                 hidden -> {
                     // No eye: never keep working invisibly; show the window instead.
                     bubbles.hideEye(); hidden = false
-                    if (window.ensureShown()) { helpPending?.let { window.setBanner(it) }; null }
+                    if (window.ensureShown()) { helpPending?.let { window.setBanner(it) }; bubbles.ensureMinimize(); null }
                     else "neither the eye bubble nor the window could be shown"
                 }
-                else -> if (window.ensureShown()) null else "the background window could not be shown"
+                else -> if (window.ensureShown()) { bubbles.ensureMinimize(); null } else "the background window could not be shown"
             })
         }
         val why = result.get() ?: return null
@@ -154,7 +154,7 @@ class BackgroundSession(
     fun show(): Boolean {
         if (mode != Mode.OWN) return mode == Mode.NATIVE
         hidden = false
-        onMain { bubbles.hideEye(); window.show(); helpPending?.let { window.setBanner(it) } }
+        onMain { window.show(); bubbles.showMinimize(); helpPending?.let { window.setBanner(it) } }
         return true
     }
 

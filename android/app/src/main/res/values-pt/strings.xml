@@ -124,7 +124,6 @@
     <string name="back">Voltar</string>
 
     <string name="float_hide">Esconder</string>
-    <string name="float_handle">⠿ tela de fundo</string>
     <string name="float_handle_hint">Arraste até o X para fechar a tela de fundo</string>
     <string name="float_help_done">(toque aqui quando terminar)</string>
     <string name="float_agent_stopped">DroidHand: agente parado</string>

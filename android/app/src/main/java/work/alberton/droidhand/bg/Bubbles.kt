@@ -17,44 +17,102 @@ import kotlin.math.abs
 import kotlin.math.hypot
 
 /**
- * The small floating controls around a background session:
- * - eye bubble: the mini window is hidden but the agent keeps working; tap = show again;
- * - close target: the "X" bubble that appears at the bottom while dragging; drop = close;
- * - native handle: for the native (system-drawn) window, a pill to drag onto the X.
- * Main thread only.
+ * The small floating controls around a background session. One round bubble sits
+ * under the Stop button and changes with the window:
+ * - MINIMIZE: own window shown; tap = hide it (the agent keeps working);
+ * - EYE: own window hidden; tap = show it again;
+ * - NATIVE: native (system-drawn) window, which Android does not let us hide.
+ * Dragging the bubble onto the "X" target (shown at the bottom while dragging)
+ * closes the background session. Main thread only.
  */
 class Bubbles(private val ctx: Context, private val session: BackgroundSession) {
     private val wm = ctx.getSystemService(WindowManager::class.java)
-    private var eye: View? = null
+    private enum class Kind { EYE, MINIMIZE, NATIVE }
+    private var bubble: View? = null
+    private var kind: Kind? = null
     private var target: TextView? = null
-    private var handle: View? = null
+    /** Where the user last dropped the bubble (kept across kind changes). */
+    private var posX = -1
+    private var posY = -1
 
-    // ---- Eye bubble (sits under the stop button) ----
-    fun showEye() {
-        if (eye != null) return
+    fun showEye() = showBubble(Kind.EYE)
+    fun showMinimize() = showBubble(Kind.MINIMIZE)
+    fun showNativeHandle() = showBubble(Kind.NATIVE)
+
+    fun hideEye() = hideBubble(Kind.EYE)
+    fun hideMinimize() = hideBubble(Kind.MINIMIZE)
+    fun hideNativeHandle() = hideBubble(Kind.NATIVE)
+
+    /** (Re)adds the bubble of that kind if it is not on screen; true if it is visible. */
+    fun ensureEye(): Boolean = ensure(Kind.EYE)
+    fun ensureMinimize(): Boolean = ensure(Kind.MINIMIZE)
+    fun ensureNativeHandle(): Boolean = ensure(Kind.NATIVE)
+
+    private fun ensure(k: Kind): Boolean {
+        if (kind != k || bubble?.parent == null) { removeBubble(); showBubble(k) }
+        return bubble?.parent != null
+    }
+
+    private fun hideBubble(k: Kind) { if (kind == k) removeBubble() }
+
+    private fun removeBubble() { bubble?.let { runCatching { wm.removeView(it) } }; bubble = null; kind = null }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun showBubble(k: Kind) {
+        if (kind == k && bubble != null) return
+        removeBubble()
         val size = ctx.dp(32f)
+        val (icon, color, desc) = when (k) {
+            Kind.EYE -> Triple(R.drawable.ic_eye, "#1E88E5", R.string.cd_show_bg)
+            Kind.MINIMIZE -> Triple(R.drawable.ic_minimize, "#5E6472", R.string.cd_hide_bg)
+            Kind.NATIVE -> Triple(R.drawable.ic_window, "#5E6472", R.string.cd_handle_bg)
+        }
         val v = ImageView(ctx).apply {
-            setImageResource(R.drawable.ic_eye)
+            setImageResource(icon)
             setColorFilter(Color.WHITE)
             val pad = ctx.dp(7f); setPadding(pad, pad, pad, pad)
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#1E88E5")); setStroke(ctx.dp(1f), Color.WHITE)
+                setColor(Color.parseColor(color)); setStroke(ctx.dp(1f), Color.WHITE)
             }
-            alpha = 0.7f
-            contentDescription = ctx.getString(work.alberton.droidhand.R.string.cd_show_bg)
-            setOnClickListener { session.show() }
+            alpha = 0.75f
+            contentDescription = ctx.getString(desc)
         }
         val lp = overlayParams(size, size, Gravity.TOP or Gravity.END).apply {
-            x = ctx.dp(6f); y = ctx.resources.displayMetrics.heightPixels / 3 + ctx.dp(40f)
+            x = if (posX >= 0) posX else ctx.dp(6f)
+            y = if (posY >= 0) posY else ctx.resources.displayMetrics.heightPixels / 3 + ctx.dp(40f)
         }
-        runCatching { wm.addView(v, lp) }.onSuccess { eye = v }
+        var downX = 0f; var downY = 0f; var sx = 0; var sy = 0; var moved = false
+        v.setOnTouchListener { view, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> { downX = e.rawX; downY = e.rawY; sx = lp.x; sy = lp.y; moved = false }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = e.rawX - downX; val dy = e.rawY - downY
+                    if (!moved && (abs(dx) > ctx.dp(6f) || abs(dy) > ctx.dp(6f))) { moved = true; showTarget() }
+                    if (moved) {
+                        // Gravity END: x grows to the left.
+                        lp.x = sx - dx.toInt(); lp.y = sy + dy.toInt()
+                        runCatching { wm.updateViewLayout(view, lp) }
+                        hover(e.rawX, e.rawY)
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    val close = moved && hover(e.rawX, e.rawY)
+                    hideTarget()
+                    if (moved && !close) { posX = lp.x; posY = lp.y }
+                    when {
+                        close -> session.close("user")
+                        moved -> Unit
+                        k == Kind.EYE -> session.show()
+                        k == Kind.MINIMIZE -> session.hide()
+                        else -> Toast.makeText(ctx, R.string.float_handle_hint, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            true
+        }
+        runCatching { wm.addView(v, lp) }.onSuccess { bubble = v; kind = k }
     }
-
-    fun hideEye() { eye?.let { runCatching { wm.removeView(it) } }; eye = null }
-
-    /** (Re)adds the eye if it is not on screen; true if it is visible. */
-    fun ensureEye(): Boolean { if (eye?.parent == null) { hideEye(); showEye() }; return eye?.parent != null }
 
     // ---- Close target ("X" bubble at the bottom while dragging) ----
     fun showTarget() {
@@ -88,54 +146,5 @@ class Bubbles(private val ctx: Context, private val session: BackgroundSession) 
         setStroke(ctx.dp(2f), Color.WHITE)
     }
 
-    // ---- Native-window handle: drag it onto the X to remove the native window ----
-    @SuppressLint("ClickableViewAccessibility")
-    fun showNativeHandle() {
-        if (handle != null) return
-        val v = TextView(ctx).apply {
-            text = ctx.getString(work.alberton.droidhand.R.string.float_handle)
-            setTextColor(Color.WHITE); setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            val p = ctx.dp(8f); setPadding(p, p / 2, p, p / 2)
-            background = GradientDrawable().apply {
-                cornerRadius = ctx.dp(14f).toFloat(); setColor(Color.parseColor("#CC202124"))
-            }
-            contentDescription = ctx.getString(work.alberton.droidhand.R.string.cd_handle_bg)
-        }
-        val lp = overlayParams(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT).apply {
-            x = ctx.dp(12f); y = ctx.dp(80f)
-        }
-        var downX = 0f; var downY = 0f; var sx = 0; var sy = 0; var moved = false
-        v.setOnTouchListener { view, e ->
-            when (e.actionMasked) {
-                MotionEvent.ACTION_DOWN -> { downX = e.rawX; downY = e.rawY; sx = lp.x; sy = lp.y; moved = false }
-                MotionEvent.ACTION_MOVE -> {
-                    val dx = e.rawX - downX; val dy = e.rawY - downY
-                    if (!moved && (abs(dx) > ctx.dp(6f) || abs(dy) > ctx.dp(6f))) { moved = true; showTarget() }
-                    if (moved) {
-                        lp.x = sx + dx.toInt(); lp.y = sy + dy.toInt()
-                        runCatching { wm.updateViewLayout(view, lp) }
-                        hover(e.rawX, e.rawY)
-                    }
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    val close = moved && hover(e.rawX, e.rawY)
-                    hideTarget()
-                    if (close) session.close("user")
-                    else if (!moved) Toast.makeText(ctx, work.alberton.droidhand.R.string.float_handle_hint, Toast.LENGTH_SHORT).show()
-                }
-            }
-            true
-        }
-        runCatching { wm.addView(v, lp) }.onSuccess { handle = v }
-    }
-
-    fun hideNativeHandle() { handle?.let { runCatching { wm.removeView(it) } }; handle = null }
-
-    /** (Re)adds the native-window handle if it is not on screen; true if it is visible. */
-    fun ensureNativeHandle(): Boolean {
-        if (handle?.parent == null) { hideNativeHandle(); showNativeHandle() }
-        return handle?.parent != null
-    }
-
-    fun hideAll() { hideEye(); hideTarget(); hideNativeHandle() }
+    fun hideAll() { removeBubble(); hideTarget() }
 }

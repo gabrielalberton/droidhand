@@ -27,7 +27,7 @@ export class ControlClient {
   ) {}
 
   /** Run a tool through the daemon. Rejects if the daemon is unreachable, closes, or does not answer in time. */
-  async call(tool: string, args: Record<string, unknown>): Promise<ToolResult> {
+  async call(tool: string, args: Record<string, unknown>, timeoutMs = this.timeoutMs): Promise<ToolResult> {
     await this.ensureConnected();
     const ws = this.ws;
     if (!ws) throw new Error("control channel not connected");
@@ -36,7 +36,7 @@ export class ControlClient {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`control call timeout for '${tool}'`));
-      }, this.timeoutMs);
+      }, timeoutMs);
       this.pending.set(id, { resolve, reject, timer });
       ws.send(JSON.stringify({ type: "call", id, tool, args } satisfies ControlCall));
     });
