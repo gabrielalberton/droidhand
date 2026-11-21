@@ -33,6 +33,7 @@ States observed (`dumpsys power` / `dumpsys window` / `deviceidle`):
 | MainScreenGate prompt | ✅ never shown | ✅ never shown | correct: gate only asks when unlocked |
 | PIN bouncer via a11y | — | ✅ readable/actionable | after a swipe up: "Inserir PIN", keys `1`–`9`,`0` as ViewGroups with labels, "Caixa de edição de PIN" → `Unlocker` can find them |
 | `unlock_device` (feature off) | ✅ refuses | ✅ refuses | `unlock_disabled`, no wake |
+| `unlock_device` (feature on, PIN saved) | ✅ ~2.9 s | ✅ ~3.1 s | tested 2026-11-21 09:5x after fix 611e878 (USE_BIOMETRIC): unlocked from AOD and from the awake lock screen, app underneath resumed |
 | **Native background window** | ❌ | ❌ | overlay display shows the **secondary lock-screen clock**; app behind it; snapshot "no active window" |
 | **Own background window** (helper) | ✅ **works** | ✅ **works** | display `FLAG_ALWAYS_UNLOCKED` + `OWN_DISPLAY_GROUP`: Calculator, **Settings** and **Chrome** launched, snapshot, taps (1+2=… / C,7) and `type_text` into Chrome all worked while locked and in deep doze, window hidden or shown |
 | Own window `screen_capture` | ⚠️ | ✅ | black while the display is `DOZE_SUSPEND` and hidden; real frame when awake |
