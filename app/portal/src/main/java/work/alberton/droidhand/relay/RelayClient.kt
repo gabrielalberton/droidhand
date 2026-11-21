@@ -43,6 +43,11 @@ class RelayClient(context: Context) {
         connect()
     }
 
+    /** Unsolicited event to the relay (e.g. the user tapped Stop). */
+    fun sendEvent(event: String, payload: JSONObject) {
+        ws?.send(JSONObject().put("type", "event").put("event", event).put("payload", payload).toString())
+    }
+
     /** Tell the relay about a device-side change (e.g. the suggestion toggle) without reconnecting. */
     fun sendDeviceInfo() {
         ws?.send(JSONObject().put("type", "event").put("event", "device_info").put("payload", deviceJson()).toString())

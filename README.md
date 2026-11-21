@@ -39,7 +39,7 @@ See the full design in **[docs/PRD.md](docs/PRD.md)**.
 - **P1 — MVP** *(in progress)*
   - ✅ Relay daemon + per-session MCP adapter (TypeScript), 37 tools, token auth, audit, panic — built & tested, deployed as a user service, registered in Claude Code + Codex.
   - ✅ Feature-suggestion log (suggest/list/export), OFF by default, device-gated.
-  - ✅ Android Portal app (a11y perception + interaction, relay client, floating panic button) — built and tested on a Galaxy S24 Ultra (Android 17).
+  - ✅ Android Portal app (a11y perception + interaction, relay client, floating Stop button (cancels the current action)) — built and tested on a Galaxy S24 Ultra (Android 17).
   - ✅ Background display with mini window: native method (debugging OFF) and own-window method (trusted display via a shell helper; hide/show, resize, opacity, touch passthrough, drag-to-X close). See PRD §7.10.
 - **P2 — Privilege:** ADB-on-demand, settings writer, confirmation gates, encrypted on-device audit
 - **P3 — Breadth & hardening:** files/media/comms, PII mode, CI-signed releases, F-Droid

@@ -98,13 +98,13 @@
     <string name="priv_suggestions_desc">Permite que o agente registre ideias de novos recursos do DroidHand no seu computador. Desligado por padrão.</string>
     <string name="priv_token_note">O campo do token é sempre informado ao agente como senha, mesmo quando visível.</string>
     <string name="priv_audit_note">Cada ação fica registrada num log de auditoria somente-acréscimo no seu computador.</string>
-    <string name="priv_panic_note">O botão vermelho flutuante para o agente na hora.</string>
+    <string name="priv_panic_note">O botãozinho vermelho na tela cancela a ação atual do agente; ele é avisado e nada precisa ser reativado. Para desconectar de vez, use a notificação ou este app.</string>
     <string name="priv_ask_main">Perguntar antes de usar a tela principal</string>
     <string name="priv_ask_main_desc">Se você estiver usando o celular, o agente pergunta antes de tocar ou digitar na sua tela. Janelas de fundo nunca perguntam.</string>
     <string name="priv_ask_on">Pergunta antes de usar sua tela</string>
     <string name="priv_ask_off">Age na sua tela sem perguntar</string>
     <string name="gate_title">Deixar o agente usar sua tela?</string>
-    <string name="gate_body">Você está usando o celular. O agente quer tocar e digitar na tela principal. O botão vermelho o interrompe a qualquer momento.</string>
+    <string name="gate_body">Você está usando o celular. O agente quer tocar e digitar na tela principal. O botão vermelho cancela a qualquer momento.</string>
     <string name="gate_allow">Permitir</string>
     <string name="gate_deny">Agora não</string>
     <string name="back">Voltar</string>
@@ -119,5 +119,6 @@
     <string name="cd_back_bg">Voltar (janela de fundo)</string>
     <string name="cd_resize_bg">Redimensionar a janela de fundo</string>
     <string name="cd_handle_bg">Janela de fundo do DroidHand: arraste até o X para fechar</string>
-    <string name="cd_panic">Parar o agente do DroidHand</string>
+    <string name="cd_stop">Parar a ação atual do agente</string>
+    <string name="float_action_cancelled">DroidHand: ação cancelada</string>
 </resources>

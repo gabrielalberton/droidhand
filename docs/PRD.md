@@ -314,7 +314,7 @@ The agent can drive apps on a second display while the operator keeps using the 
 | Hide while the agent keeps working | ✗ | ✓ "Esconder" → eye bubble to bring it back; the display keeps rendering into an off-screen sink (a display with no surface turns OFF and its apps stop) |
 | Close | Drag our handle onto the X bubble; apps move behind the user's apps | Drag the title bar onto the X bubble; the display and its apps are destroyed |
 | Operator interaction | Through the system window | Touches injected into the display (INJECT_EVENTS), back button |
-| Panic | Red bubble stays pinned during any background session; panic closes the session and stops the agent |
+| Stop | Small red Stop bubble (shown while the agent acts, pinned during background sessions) cancels the current action only; the agent gets `stopped_by_user` on that/next call; nothing needs re-enabling. Full kill switch = notification Disconnect / app / `panic_disconnect` |
 
 Tools: `bg_open {mode: auto|native|own}`, `bg_status`, `bg_hide`, `bg_show`, `bg_close`, `request_user_help {message}`, `own_helper_start`, `own_helper_stop`; every phone tool takes `display`.
 

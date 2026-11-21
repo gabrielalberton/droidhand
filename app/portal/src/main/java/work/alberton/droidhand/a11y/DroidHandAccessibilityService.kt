@@ -32,7 +32,7 @@ class DroidHandAccessibilityService : AccessibilityService() {
     @Volatile
     private var refPoints: Map<String, IntArray> = emptyMap()
 
-    lateinit var panic: PanicOverlay
+    lateinit var stopButton: StopButton
         private set
 
     /** Background display session (native or own window). */
@@ -46,9 +46,9 @@ class DroidHandAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         instance = this
         gate = MainScreenGate(this)
-        panic = PanicOverlay(this) { stopAgent() }
-        // While a background session exists the panic button stays on screen.
-        bg = work.alberton.droidhand.bg.BackgroundSession(this) { active -> panic.setPinned(active) }
+        stopButton = StopButton(this) { userStop() }
+        // While a background session exists the stop button stays on screen.
+        bg = work.alberton.droidhand.bg.BackgroundSession(this) { active -> stopButton.setPinned(active) }
         // The relay comes up with the accessibility service (also after reboots and
         // app updates), as long as the operator has not disconnected it.
         val prefs = work.alberton.droidhand.data.Prefs(this)
@@ -57,11 +57,29 @@ class DroidHandAccessibilityService : AccessibilityService() {
         }
     }
 
+    /** When the user last tapped Stop (elapsedRealtime), 0 = not pending. Consumed by the tool router. */
+    @Volatile var stopRequestedAt = 0L
+    @Volatile private var gestureLatch: CountDownLatch? = null
+
+    /**
+     * Stop button: cancel the agent's current action and let it know. Unlike
+     * [stopAgent] the session stays connected, so nothing has to be re-enabled.
+     */
+    fun userStop() {
+        stopRequestedAt = android.os.SystemClock.elapsedRealtime()
+        if (::gate.isInitialized) gate.reset() // leave the user's screen: ask again next time
+        gestureLatch?.countDown() // unblock an in-flight gesture; it reports as cancelled
+        work.alberton.droidhand.relay.RelayClient.current?.sendEvent("user_stop", org.json.JSONObject())
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            android.widget.Toast.makeText(this, work.alberton.droidhand.R.string.float_action_cancelled, android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
     /** Kill switch: stop the agent session now and keep it off until the operator restarts it. */
     fun stopAgent() {
         if (::gate.isInitialized) gate.reset()
         if (::bg.isInitialized) runCatching { bg.close("panic") }
-        if (::panic.isInitialized) { panic.setPinned(false); panic.hide() }
+        if (::stopButton.isInitialized) { stopButton.setPinned(false); stopButton.hide() }
         work.alberton.droidhand.service.RelayService.stop(this)
         android.os.Handler(android.os.Looper.getMainLooper()).post {
             android.widget.Toast.makeText(this, work.alberton.droidhand.R.string.float_agent_stopped, android.widget.Toast.LENGTH_SHORT).show()
@@ -71,7 +89,7 @@ class DroidHandAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         if (::gate.isInitialized) gate.release()
         if (::bg.isInitialized) runCatching { bg.close("service destroyed") }
-        if (::panic.isInitialized) panic.hide()
+        if (::stopButton.isInitialized) stopButton.hide()
         if (instance === this) instance = null
         shotExecutor.shutdown()
         super.onDestroy()
@@ -167,7 +185,7 @@ class DroidHandAccessibilityService : AccessibilityService() {
             .addStroke(GestureDescription.StrokeDescription(path, 0, durationMs))
             .setDisplayId(displayId)
             .build()
-        val latch = CountDownLatch(1)
+        val latch = CountDownLatch(1).also { gestureLatch = it }
         var done = false
         val ok = dispatchGesture(gesture, object : GestureResultCallback() {
             override fun onCompleted(g: GestureDescription?) { done = true; latch.countDown() }

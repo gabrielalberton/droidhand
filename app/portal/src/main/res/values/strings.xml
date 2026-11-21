@@ -104,13 +104,13 @@
     <string name="priv_suggestions_desc">Let the agent log ideas for new DroidHand features on your computer. Off by default.</string>
     <string name="priv_token_note">The token field is always reported as a password to the agent, even when shown.</string>
     <string name="priv_audit_note">Every action is recorded in an append-only audit log on your computer.</string>
-    <string name="priv_panic_note">The red floating button stops the agent instantly.</string>
+    <string name="priv_panic_note">The small red button on screen cancels the agent\'s current action; the agent is told and nothing needs re-enabling. To fully disconnect, use the notification or this app.</string>
     <string name="priv_ask_main">Ask before using the main screen</string>
     <string name="priv_ask_main_desc">If you are using the phone, the agent asks before tapping or typing on your screen. Background windows never ask.</string>
     <string name="priv_ask_on">Asks before using your screen</string>
     <string name="priv_ask_off">Acts on your screen without asking</string>
     <string name="gate_title">Let the agent use your screen?</string>
-    <string name="gate_body">You are using the phone. The agent wants to tap and type on the main screen. The red button stops it anytime.</string>
+    <string name="gate_body">You are using the phone. The agent wants to tap and type on the main screen. The red button cancels it anytime.</string>
     <string name="gate_allow">Allow</string>
     <string name="gate_deny">Not now</string>
     <string name="back">Back</string>
@@ -126,5 +126,6 @@
     <string name="cd_back_bg">Back (background window)</string>
     <string name="cd_resize_bg">Resize background window</string>
     <string name="cd_handle_bg">DroidHand background window: drag to the X to close</string>
-    <string name="cd_panic">Stop DroidHand agent</string>
+    <string name="cd_stop">Stop the agent\'s current action</string>
+    <string name="float_action_cancelled">DroidHand: action cancelled</string>
 </resources>

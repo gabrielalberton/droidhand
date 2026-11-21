@@ -18,6 +18,7 @@ Include: affected component (app / relay / mcp-server), version/commit, reproduc
 - **Defense in depth.** Authorization tiers (standard / privileged / sensitive) enforced both server-side and on-device.
 - **Confirmation gates.** Sensitive and destructive actions require an on-device tap; the agent alone cannot authorize them (prompt-injection resistance).
 - **Kill switch.** Persistent notification button + Quick Settings tile + `panic_disconnect` end the session and any ADB window immediately.
+- **Stop button.** A small floating red button, visible while the agent acts, cancels the current action and tells the agent (`stopped_by_user`) without disconnecting.
 - **Minimize exposure.** Debugging is off except during short, audited ADB-on-demand windows (default TTL 120s), always closed in a `finally`.
 - **Audit.** Append-only logs on both NUC and phone; secrets redacted.
 - **No telemetry. No cloud by default.**

@@ -16,12 +16,13 @@ import android.widget.TextView
 import kotlin.math.abs
 
 /**
- * Small, translucent floating "panic" button shown while the agent is acting on
- * the screen. Tapping it stops the agent immediately. It is an accessibility
+ * Small, translucent floating "stop" button shown while the agent is acting on
+ * the screen. Tapping it cancels the agent's current action and tells the agent
+ * (the connection stays up; nothing has to be re-enabled). It is an accessibility
  * overlay (TYPE_ACCESSIBILITY_OVERLAY), so it needs no "draw over other apps"
  * permission. Draggable; hides itself after [IDLE_MS] without agent actions.
  */
-class PanicOverlay(private val service: AccessibilityService, private val onPanic: () -> Unit) {
+class StopButton(private val service: AccessibilityService, private val onStop: () -> Unit) {
     private val main = Handler(Looper.getMainLooper())
     private val wm = service.getSystemService(WindowManager::class.java)
     private var view: View? = null
@@ -74,7 +75,7 @@ class PanicOverlay(private val service: AccessibilityService, private val onPani
                 setStroke(dp(1f), Color.WHITE)
             }
             alpha = 0.45f
-            contentDescription = service.getString(work.alberton.droidhand.R.string.cd_panic)
+            contentDescription = service.getString(work.alberton.droidhand.R.string.cd_stop)
         }
         val lp = WindowManager.LayoutParams(
             size, size,
@@ -87,7 +88,7 @@ class PanicOverlay(private val service: AccessibilityService, private val onPani
             y = service.resources.displayMetrics.heightPixels / 3
         }
 
-        // Drag to move; a short touch without movement is a tap (= panic).
+        // Drag to move; a short touch without movement is a tap (= stop).
         var downX = 0f
         var downY = 0f
         var startX = 0
@@ -112,8 +113,8 @@ class PanicOverlay(private val service: AccessibilityService, private val onPani
                 MotionEvent.ACTION_UP -> {
                     v.alpha = 0.45f
                     if (!moved) {
-                        hide()
-                        onPanic()
+                        if (!pinned) hide()
+                        onStop()
                     }
                 }
                 MotionEvent.ACTION_CANCEL -> v.alpha = 0.45f

@@ -29,7 +29,7 @@ class Bubbles(private val ctx: Context, private val session: BackgroundSession) 
     private var target: TextView? = null
     private var handle: View? = null
 
-    // ---- Eye bubble (sits under the panic button) ----
+    // ---- Eye bubble (sits under the stop button) ----
     fun showEye() {
         if (eye != null) return
         val size = ctx.dp(32f)

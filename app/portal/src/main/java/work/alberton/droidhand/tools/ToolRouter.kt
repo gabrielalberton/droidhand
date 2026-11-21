@@ -25,10 +25,26 @@ class ToolRouter(context: Context) {
     private val prefs = Prefs(app)
     private val suggestions = SuggestionStore(app)
 
-    fun run(tool: String, args: JSONObject): ToolResult = try {
-        dispatch(tool, args)
-    } catch (e: Exception) {
-        ToolResult(false, error = "${e.javaClass.simpleName}: ${e.message}")
+    fun run(tool: String, args: JSONObject): ToolResult {
+        val svc = DroidHandAccessibilityService.instance
+        val started = android.os.SystemClock.elapsedRealtime()
+        // The user tapped Stop since the last action: tell the agent once, on its next call.
+        if (svc != null && svc.stopRequestedAt != 0L && tool != "panic") {
+            val fresh = started - svc.stopRequestedAt < STOP_NOTICE_MS
+            svc.stopRequestedAt = 0L
+            if (fresh) return ToolResult(false, error = STOPPED)
+        }
+        val res = try {
+            dispatch(tool, args)
+        } catch (e: Exception) {
+            ToolResult(false, error = "${e.javaClass.simpleName}: ${e.message}")
+        }
+        // Stop tapped while this action ran: report it as cancelled.
+        if (svc != null && svc.stopRequestedAt >= started && svc.stopRequestedAt != 0L) {
+            svc.stopRequestedAt = 0L
+            return ToolResult(false, error = STOPPED)
+        }
+        return res
     }
 
     private fun dispatch(tool: String, args: JSONObject): ToolResult {
@@ -40,8 +56,8 @@ class ToolRouter(context: Context) {
             val gate = runCatching { svc.gate }.getOrNull()
             gate?.check()?.let { return ToolResult(false, error = it) }
         }
-        // Show the floating panic button whenever the agent acts on the screen.
-        if (tool in ACTING && svc != null && runCatching { svc.panic }.isSuccess) svc.panic.bump()
+        // Show the floating stop button whenever the agent acts on the screen.
+        if (tool in ACTING && svc != null && runCatching { svc.stopButton }.isSuccess) svc.stopButton.bump()
         return when (tool) {
             // ---- Kill switch (from the NUC: panic_disconnect) ----
             "panic" -> {
@@ -263,7 +279,7 @@ class ToolRouter(context: Context) {
 
     companion object {
 
-        /** Tools that act on the screen or device (they show the panic button). */
+        /** Tools that act on the screen or device (they show the stop button). */
         val ACTING = setOf(
             "tap", "long_press", "swipe", "scroll", "type_text", "key_event", "global_action",
             "go_home", "launch_app", "open_url", "set_setting", "bg_open", "request_user_help",
@@ -274,6 +290,10 @@ class ToolRouter(context: Context) {
             "tap", "long_press", "swipe", "scroll", "type_text", "key_event", "global_action",
             "go_home", "launch_app", "open_url",
         )
+
+        const val STOP_NOTICE_MS = 2 * 60_000L
+        const val STOPPED = "stopped_by_user: the user tapped Stop on the phone and your current action was cancelled. " +
+            "Stop the current task and check with the user before continuing (the connection is still up)."
 
         val KEYCODES = mapOf(
             "back" to android.view.KeyEvent.KEYCODE_BACK,

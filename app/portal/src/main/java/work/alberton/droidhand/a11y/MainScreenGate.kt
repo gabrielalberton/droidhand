@@ -61,7 +61,7 @@ class MainScreenGate(private val svc: AccessibilityService) {
         reset()
     }
 
-    /** Forget any approval and close the prompt (screen off, panic). */
+    /** Forget any approval and close the prompt (screen off, Stop). */
     fun reset() {
         approved = false
         deniedAt = 0
