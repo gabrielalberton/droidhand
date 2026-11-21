@@ -40,6 +40,17 @@
             </intent-filter>
         </activity>
 
+        <!-- Turns the screen on and opens the lock screen's PIN pad (unlock_device). -->
+        <activity
+            android:name=".ui.WakeActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <service
             android:name=".service.RelayService"
             android:exported="false"

@@ -113,6 +113,17 @@
     <string name="gate_body">You are using the phone. The agent wants to tap and type on the main screen. The red button cancels it anytime.</string>
     <string name="gate_allow">Allow</string>
     <string name="gate_deny">Not now</string>
+    <string name="unlock_section">Unlock by the agent</string>
+    <string name="unlock_danger_title">Dangerous: full access to your phone</string>
+    <string name="unlock_danger_body">With this on, the agent can unlock your phone by itself and reach everything on it: banking, email, messages, passwords and verification codes. Anyone who controls the agent, your computer or the relay gets the same power. Use only if you understand and accept the risk.</string>
+    <string name="unlock_pin">Device PIN</string>
+    <string name="unlock_pin_saved">Saved (hidden)</string>
+    <string name="unlock_save">Save PIN</string>
+    <string name="unlock_remove">Remove</string>
+    <string name="unlock_enable">Allow the agent to unlock</string>
+    <string name="unlock_enable_desc">Uses the saved PIN on the lock screen. One wrong attempt turns this off automatically.</string>
+    <string name="unlock_auth_title">Confirm it\'s you</string>
+    <string name="unlock_disclaimer">Disclaimer: this feature is provided as is, without warranty of any kind. You alone decide to enable it and are solely responsible for any access, loss or damage that results. The DroidHand authors and contributors are not liable. The PIN stays encrypted on this phone (Android Keystore) and is never sent to the agent or the relay.</string>
     <string name="back">Back</string>
 
     <!-- Floating controls -->

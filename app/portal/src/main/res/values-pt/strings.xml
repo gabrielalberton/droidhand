@@ -107,6 +107,17 @@
     <string name="gate_body">Você está usando o celular. O agente quer tocar e digitar na tela principal. O botão vermelho cancela a qualquer momento.</string>
     <string name="gate_allow">Permitir</string>
     <string name="gate_deny">Agora não</string>
+    <string name="unlock_section">Desbloqueio pelo agente</string>
+    <string name="unlock_danger_title">Perigoso: acesso total ao seu celular</string>
+    <string name="unlock_danger_body">Com isto ligado, o agente consegue desbloquear o celular sozinho e alcançar tudo nele: banco, e-mail, mensagens, senhas e códigos de verificação. Quem controlar o agente, o seu computador ou o relay ganha o mesmo poder. Use somente se você entende e aceita o risco.</string>
+    <string name="unlock_pin">PIN do aparelho</string>
+    <string name="unlock_pin_saved">Salvo (oculto)</string>
+    <string name="unlock_save">Salvar PIN</string>
+    <string name="unlock_remove">Remover</string>
+    <string name="unlock_enable">Permitir que o agente desbloqueie</string>
+    <string name="unlock_enable_desc">Usa o PIN salvo na tela de bloqueio. Uma tentativa errada desliga isto automaticamente.</string>
+    <string name="unlock_auth_title">Confirme que é você</string>
+    <string name="unlock_disclaimer">Isenção de responsabilidade: este recurso é fornecido no estado em que se encontra, sem garantia de qualquer tipo. A decisão de ativá-lo é exclusivamente sua, e você é o único responsável por qualquer acesso, perda ou dano decorrente. Os autores e colaboradores do DroidHand não se responsabilizam. O PIN fica cifrado neste celular (Android Keystore) e nunca é enviado ao agente nem ao relay.</string>
     <string name="back">Voltar</string>
 
     <string name="float_hide">Esconder</string>

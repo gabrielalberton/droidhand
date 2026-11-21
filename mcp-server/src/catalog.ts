@@ -81,6 +81,14 @@ export const CATALOG: ToolDef[] = [
     description: "Write a protected setting (requires WRITE_SECURE_SETTINGS on the phone).",
     input: { namespace: z.enum(["system", "secure", "global"]), key: z.string(), value: z.string() } },
 
+  // ---- Lock screen ----
+  { name: "get_lock_state", tier: "standard", confirm: false,
+    description: "Screen on/off, locked, secure lock, and whether PIN unlock by the agent is enabled.", input: {} },
+  { name: "unlock_device", tier: "privileged", confirm: false,
+    description: "Unlock the phone with the PIN the user saved in the DroidHand app (opt-in, off by default; the PIN never leaves the phone). " +
+      "Wakes the screen, opens the PIN pad and enters it. One wrong attempt disables the feature. Only when the task needs the main screen.",
+    input: {} },
+
   // ---- ADB-on-demand (privileged, confirm) ----
   { name: "adb_session_begin", tier: "privileged", confirm: true,
     description: "Enable wireless debugging and open a short-lived local ADB session. Auto-closes on TTL.",

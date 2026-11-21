@@ -41,6 +41,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean(KEY_ASK_MAIN, true)
         set(v) = sp.edit().putBoolean(KEY_ASK_MAIN, v).apply()
 
+    /** The agent may unlock the phone with the saved PIN (SecretStore). Default: off. */
+    var pinUnlockEnabled: Boolean
+        get() = sp.getBoolean(KEY_PIN_UNLOCK, false)
+        set(v) = sp.edit().putBoolean(KEY_PIN_UNLOCK, v).apply()
+
     /** App theme: "system", "light" or "dark". */
     var themeMode: String
         get() = sp.getString(KEY_THEME, THEME_SYSTEM) ?: THEME_SYSTEM
@@ -66,6 +71,7 @@ class Prefs(context: Context) {
         const val THEME_LIGHT = "light"
         const val THEME_DARK = "dark"
         private const val KEY_ASK_MAIN = "ask_main_screen"
+        private const val KEY_PIN_UNLOCK = "pin_unlock_enabled"
         private const val KEY_THEME = "theme_mode"
         private const val KEY_DYNAMIC = "dynamic_color"
         private const val KEY_ACCENT = "accent"

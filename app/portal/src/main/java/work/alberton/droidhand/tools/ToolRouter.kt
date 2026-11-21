@@ -10,6 +10,7 @@ import android.provider.Settings
 import org.json.JSONArray
 import org.json.JSONObject
 import work.alberton.droidhand.a11y.DroidHandAccessibilityService
+import work.alberton.droidhand.a11y.Unlocker
 import work.alberton.droidhand.data.Prefs
 import work.alberton.droidhand.suggestions.SuggestionStore
 
@@ -64,6 +65,10 @@ class ToolRouter(context: Context) {
                 if (svc != null) svc.stopAgent() else work.alberton.droidhand.service.RelayService.stop(app)
                 ToolResult(true, JSONObject().put("stopped", true))
             }
+
+            // ---- Unlock with the user's saved PIN (opt-in in the app) ----
+            "unlock_device" -> withService(svc) { s -> ToolResult(true, Unlocker(s).unlock()) }
+            "get_lock_state" -> ToolResult(true, lockState())
 
             // ---- Device & app info ----
             "get_device_info" -> ToolResult(true, deviceInfo(svc))
@@ -221,6 +226,16 @@ class ToolRouter(context: Context) {
                 .put("developerOptions", readSetting("global", Settings.Global.DEVELOPMENT_SETTINGS_ENABLED))
                 .put("usb", readSetting("global", Settings.Global.ADB_ENABLED))
                 .put("wifi", readSetting("global", "adb_wifi_enabled")))
+    }
+
+    private fun lockState(): JSONObject {
+        val km = app.getSystemService(android.app.KeyguardManager::class.java)
+        val pm = app.getSystemService(android.os.PowerManager::class.java)
+        return JSONObject()
+            .put("screenOn", pm?.isInteractive == true)
+            .put("locked", km?.isKeyguardLocked == true)
+            .put("secureLock", km?.isDeviceSecure == true)
+            .put("pinUnlockAvailable", prefs.pinUnlockEnabled && work.alberton.droidhand.data.SecretStore(app).hasPin)
     }
 
     private fun launchableApps(): JSONArray {
