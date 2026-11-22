@@ -16,7 +16,7 @@ was seen, when, and how. "Untested" means nobody tried it yet, not that it fails
 | Native window opens (no ADB) | Yes | Yes |
 | Apps on the native window | Full screen (`own_content_only`) | Pop-up (freeform) windows even with `own_content_only` |
 | Agent reads/touches the native window (accessibility) | Yes | **No.** Android 13 leaves overlay displays out of accessibility (`dumpsys accessibility` lists display 0 only). Only `screen_capture` works; the tools answer `native_window_not_accessible`. Use the own window. |
-| Own window (shell helper, needs ADB) | Yes | Yes since 2026-11-22. Before, every launch crashed Samsung's multi-window code: the display flags of Android 14 mean "hidden space display" on Samsung Android 13. |
+| Own window (shell helper, needs ADB) | Yes (re-checked 2026-11-22 with the new build: launch + snapshot) | Yes since 2026-11-22. Before, every launch crashed Samsung's multi-window code: the display flags of Android 14 mean "hidden space display" on Samsung Android 13. |
 | Debug text on the native window ("Overlay #1: …") | Always drawn; cannot be removed without root | Same |
 | The native window closed by itself | Not seen | Seen once after moving an app out of it (2026-11-22); not reproduced in 2 more tries |
 
