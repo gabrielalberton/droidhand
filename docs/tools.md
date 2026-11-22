@@ -11,6 +11,7 @@ Notes column: the risk **tier** recorded in the audit log; **confirm on device**
 - `display`: display id (0 = phone screen; bg_open id = background). On 0, if the user is using the phone the app may ask them first: errors 'awaiting_user' (retry shortly) or 'user_declined' (use bg_open instead).
 - `device`: phone id (see list_devices); may be left out when only one phone is connected.
 - `ref`: stable element ref from screen_snapshot, e.g. '@4'.
+- `split`: experimental, with move=true display=0 and the shell helper: put the moved app in split screen next to the user's app.
 - `reason`: why adb is needed, shown in the audit log.
 
 Every tool that is not local also accepts `display`, and every tool that acts on one phone accepts `device`; both are left out of the tables below.
@@ -39,7 +40,7 @@ Touch, type and press keys through the accessibility service.
 | `scroll` | Scroll the screen in a direction (a swipe across its middle; 'down' reveals what is below). | `direction` "up" \| "down" \| "left" \| "right" | standard |
 | `type_text` | Type text into the focused field (or a ref), optionally pressing enter. | `text` string<br>`ref` string (optional)<br>`submit` boolean (optional) | standard |
 | `key_event` | Press a navigation key. On an own-window background display only back, home, recents and enter are available. | `key` "back" \| "home" \| "recents" \| "notifications" \| "quick_settings" \| "enter" | standard |
-| `global_action` | Perform a global accessibility action. | `action` "notifications" \| "quick_settings" \| "screenshot" \| "lock_screen" | standard |
+| `global_action` | Perform a global accessibility action. split_screen toggles split screen with the app on top of the main screen (e.g. after launch_app move=true display=0, so the user continues it next to their own app). | `action` "notifications" \| "quick_settings" \| "screenshot" \| "lock_screen" \| "split_screen" | standard |
 
 ## Apps & navigation
 
@@ -47,7 +48,7 @@ Launch apps, open links and go home.
 
 | Tool | What it does | Inputs | Notes |
 | --- | --- | --- | --- |
-| `launch_app` | Launch an app by package name (display=&lt;id&gt; for a background display; bounds=[l,t,r,b] px opens a One UI pop-up window on the main screen). On a background display it opens a separate copy, so the user's own copy stays on their screen. move=true reuses the app's existing task instead and moves it: with display=&lt;id&gt; it takes the user's copy to the background display (only when the user asked: it leaves their screen); with display=0 it brings the copy from the background display to the main screen ('continue on the main screen', e.g. for the user to take over). With the shell helper running (own_helper_start) the exact task from the background display is moved and bounds turn it into a pop-up window; without it Android may pick the user's own copy if the app is also open on the main screen, and bounds are ignored. The background display has the phone screen's size by default, so a moved app keeps its state instead of being recreated. What works differs per phone: see docs/devices.md. | `package` string<br>`bounds` number[4] (optional)<br>`move` boolean (optional) | standard |
+| `launch_app` | Launch an app by package name (display=&lt;id&gt; for a background display; bounds=[l,t,r,b] px opens a One UI pop-up window on the main screen). On a background display it opens a separate copy, so the user's own copy stays on their screen. move=true reuses the app's existing task instead and moves it: with display=&lt;id&gt; it takes the user's copy to the background display (only when the user asked: it leaves their screen); with display=0 it brings the copy from the background display to the main screen ('continue on the main screen', e.g. for the user to take over). With the shell helper running (own_helper_start) the exact task from the background display is moved and bounds turn it into a pop-up window; without it Android may pick the user's own copy if the app is also open on the main screen, and bounds are ignored. The background display has the phone screen's size by default, so a moved app keeps its state instead of being recreated. What works differs per phone: see docs/devices.md. | `package` string<br>`bounds` number[4] (optional)<br>`move` boolean (optional)<br>`split` boolean (optional) | standard |
 | `open_url` | Open a URL in the default app for it, on the phone screen. For a background display, launch the browser there and type the URL. | `url` string (URL) | standard |
 | `go_home` | Go to the home screen. | — | standard |
 

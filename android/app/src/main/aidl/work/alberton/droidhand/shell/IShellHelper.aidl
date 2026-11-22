@@ -19,6 +19,11 @@ interface IShellHelper {
      * (left, top, right, bottom) then resize it into a pop-up window. Returns the task id.
      */
     int moveTask(int fromDisplay, String packageName, int toDisplay, in int[] bounds);
+    /**
+     * Experimental: put the task of [packageName] on [fromDisplay] in split screen on the
+     * main display next to the user's current app (reparented into the split stages).
+     */
+    String splitWith(int fromDisplay, String packageName);
     /** Left mouse click: unlike a touch, it does not close the user's keyboard. */
     boolean mouseClick(int displayId, int x, int y);
     int pid();

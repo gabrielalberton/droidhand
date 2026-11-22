@@ -185,12 +185,63 @@ object ShellMain {
             val taskId = field(pick, "taskId") as Int
             itf.getMethod("moveRootTaskToDisplay", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
                 .invoke(atm, taskId, toDisplay)
+            if (bounds == null || bounds.size != 4) runCatching {
+                // A task from a freeform display stays freeform (One UI 5): make it full screen,
+                // so it looks like a normal app and can be put in split screen.
+                val token = field(pick, "token")
+                val wct = Class.forName("android.window.WindowContainerTransaction").getConstructor().newInstance()
+                wct.javaClass.getMethod("setWindowingMode", Class.forName("android.window.WindowContainerToken"), Int::class.javaPrimitiveType)
+                    .invoke(wct, token, 1 /* WINDOWING_MODE_FULLSCREEN */)
+                wct.javaClass.getMethod("setBounds", Class.forName("android.window.WindowContainerToken"), android.graphics.Rect::class.java)
+                    .invoke(wct, token, null)
+                val org = itf.getMethod("getWindowOrganizerController").invoke(atm)
+                Class.forName("android.window.IWindowOrganizerController").getMethod("applyTransaction", wct.javaClass)
+                    .invoke(org, wct)
+            }.onFailure { Log.w(TAG, "fullscreen after move failed", it) }
             if (bounds != null && bounds.size == 4) {
                 // Same as `am task resize`: a freeform (pop-up) window at these bounds.
                 itf.getMethod("resizeTask", Int::class.javaPrimitiveType, android.graphics.Rect::class.java, Int::class.javaPrimitiveType)
                     .invoke(atm, taskId, android.graphics.Rect(bounds[0], bounds[1], bounds[2], bounds[3]), 0)
             }
             taskId
+        }
+
+        override fun splitWith(fromDisplay: Int, packageName: String): String = onMainLooper {
+            val atm = Class.forName("android.app.ActivityTaskManager").getMethod("getService").invoke(null)
+            val itf = Class.forName("android.app.IActivityTaskManager")
+            fun field(o: Any, name: String): Any? = runCatching { o.javaClass.getField(name).get(o) }.getOrNull()
+            @Suppress("UNCHECKED_CAST")
+            fun roots(d: Int) = itf.getMethod("getAllRootTaskInfosOnDisplay", Int::class.javaPrimitiveType).invoke(atm, d) as List<Any>
+            val mine = roots(fromDisplay).firstOrNull { r ->
+                (field(r, "topActivity") as? android.content.ComponentName)?.packageName == packageName
+            } ?: throw IllegalArgumentException("$packageName is not open on display $fromDisplay")
+            val main = roots(0)
+            // The user's app: top standard root task (activity type 1) that is visible.
+            val user = main.firstOrNull { r -> field(r, "isVisible") == true && field(r, "topActivity") != null &&
+                runCatching { r.javaClass.getMethod("getActivityType").invoke(r) as Int }.getOrDefault(0) == 1 }
+                ?: throw IllegalStateException("no app on the main screen to split with")
+            // The split root: activity type undefined (0) with two child stages.
+            val split = main.firstOrNull { r ->
+                runCatching { r.javaClass.getMethod("getActivityType").invoke(r) as Int }.getOrDefault(-1) == 0 &&
+                    ((field(r, "childTaskIds") as? IntArray)?.size ?: 0) == 2
+            } ?: throw IllegalStateException("no split-screen root on this phone")
+            val tokenCls = Class.forName("android.window.WindowContainerToken")
+            val org = itf.getMethod("getWindowOrganizerController").invoke(atm)
+            val toc = Class.forName("android.window.IWindowOrganizerController").getMethod("getTaskOrganizerController").invoke(org)
+            @Suppress("UNCHECKED_CAST")
+            val stages = (Class.forName("android.window.ITaskOrganizerController")
+                .getMethod("getChildTasks", tokenCls, IntArray::class.java).invoke(toc, field(split, "token"), null) as List<Any>)
+                .sortedBy { field(it, "taskId") as Int } // main stage is created first
+            if (stages.size != 2) throw IllegalStateException("unexpected split layout (${stages.size} stages)")
+            itf.getMethod("moveRootTaskToDisplay", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+                .invoke(atm, field(mine, "taskId") as Int, 0)
+            val wct = Class.forName("android.window.WindowContainerTransaction").getConstructor().newInstance()
+            val reparent = wct.javaClass.getMethod("reparent", tokenCls, tokenCls, Boolean::class.javaPrimitiveType)
+            reparent.invoke(wct, field(user, "token"), field(stages[0], "token"), true)
+            reparent.invoke(wct, field(mine, "token"), field(stages[1], "token"), true)
+            wct.javaClass.getMethod("reorder", tokenCls, Boolean::class.javaPrimitiveType).invoke(wct, field(split, "token"), true)
+            Class.forName("android.window.IWindowOrganizerController").getMethod("applyTransaction", wct.javaClass).invoke(org, wct)
+            "task ${field(mine, "taskId")} + ${field(user, "taskId")} in stages ${stages.map { field(it, "taskId") }}"
         }
 
         override fun pid(): Int = Process.myPid()
@@ -201,7 +252,14 @@ object ShellMain {
     }
 
     /** Run [block] on the helper's main looper (startActivity needs a Looper thread) and return its result. */
-    private fun <T> onMainLooper(block: () -> T): T {
+    private fun <T> onMainLooper(block: () -> T): T = try { onMainLooperRaw(block) } catch (e: Throwable) {
+        // Binder only carries a few exception types back; anything else became a silent null.
+        val cause = (e as? java.lang.reflect.InvocationTargetException)?.targetException ?: e
+        if (cause is IllegalArgumentException || cause is IllegalStateException || cause is SecurityException) throw cause
+        throw IllegalStateException("${cause.javaClass.simpleName}: ${cause.message}")
+    }
+
+    private fun <T> onMainLooperRaw(block: () -> T): T {
         val result = java.util.concurrent.atomic.AtomicReference<Result<T>>()
         val done = java.util.concurrent.CountDownLatch(1)
         android.os.Handler(Looper.getMainLooper()).post { result.set(runCatching(block)); done.countDown() }

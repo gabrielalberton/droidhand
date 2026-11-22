@@ -18,7 +18,7 @@ was seen, when, and how. "Untested" means nobody tried it yet, not that it fails
 | Agent reads/touches the native window (accessibility) | Yes | **No.** Android 13 leaves overlay displays out of accessibility (`dumpsys accessibility` lists display 0 only). Only `screen_capture` works; the tools answer `native_window_not_accessible`. Use the own window. |
 | Own window (shell helper, needs ADB) | Yes | Yes since 2026-11-22. Before, every launch crashed Samsung's multi-window code: the display flags of Android 14 mean "hidden space display" on Samsung Android 13. |
 | Debug text on the native window ("Overlay #1: …") | Always drawn; cannot be removed without root | Same |
-| The native window closed by itself | Not seen | Seen once after moving an app out of it (2026-11-22); could not reproduce |
+| The native window closed by itself | Not seen | Seen once after moving an app out of it (2026-11-22); not reproduced in 2 more tries |
 
 ## Moving an app between the screens (`launch_app move=true`)
 
@@ -31,8 +31,9 @@ app usually keeps running instead of being recreated.
 | Background → main screen | Yes, not recreated (Calculator) | Yes |
 | Background → main when the app is also open on the main screen | Untested | Without the helper Android picks the main-screen copy (wrong one). With the helper the exact task is moved (2026-11-22) |
 | Background → main as a pop-up window (`bounds`) | Untested | With the helper: yes, not recreated. Without it: no (bounds ignored, app recreated) |
-| Background → split screen | Untested | Untested |
-| Closing the native window | Its apps move to the main screen, on top | Untested |
+| Background → split screen (`split=true`, experimental, needs the helper) | Untested | Yes: the exact task goes to the top half, recreated (own window) but the stopwatch kept its state. The accessibility "toggle split screen" action fails on One UI 5, and an intent with LAUNCH_ADJACENT always opens a new copy. Known issue: the bottom half may get the wrong app when the user's top task is translucent |
+| Moved back without `bounds` | Full screen | Full screen (the helper turns the freeform task full screen) |
+| Closing the native window | Its apps move to the main screen, on top | Same: on top, full screen |
 
 ## Other
 

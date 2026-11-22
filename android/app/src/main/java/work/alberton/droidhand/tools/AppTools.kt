@@ -54,6 +54,12 @@ class AppTools : ToolGroup {
                 // Back from the background display: with the shell helper, move that exact task
                 // (an intent would pick the user's own copy if the app is also open on the main screen).
                 val bgDisplay = ctx.svc?.let { s -> runCatching { s.bg.takeIf { it.active }?.displayId }.getOrNull() }
+                if (move && bgDisplay != null && args.optBoolean("split", false)) {
+                    val h = ShellBridge.helper ?: return ToolResult.fail("split needs the shell helper (own_helper_start)")
+                    return runCatching { h.splitWith(bgDisplay, pkg) }.fold(
+                        { ToolResult.ok(JSONObject().put("launched", pkg).put("display", 0).put("moved", true).put("split", it)) },
+                        { ToolResult.fail("split_failed: ${it.message}") })
+                }
                 if (move && bgDisplay != null) ShellBridge.helper?.let { h ->
                     val task = runCatching { h.moveTask(bgDisplay, pkg, 0, bounds?.let { b -> IntArray(4) { b.getInt(it) } }) }
                         .onFailure { Log.w("DroidHand", "helper moveTask failed", it) }.getOrNull()

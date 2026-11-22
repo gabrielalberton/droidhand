@@ -11,6 +11,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Protocol: phones may ask the relay (`req`/`res`); `relay_status` answers admin phones only. The welcome now carries the phone's id.
 - A phone that looks connected but stops answering (e.g. frozen by the system in the background) is closed with code 4002 after two commands in a row time out, so it reconnects instead of staying a dead session.
 - `launch_app` takes `move`: reuse the app's existing task and move it between the background display and the main screen ("continue on the main screen"), instead of opening a separate copy. With the shell helper the exact task is moved back (never the user's own copy) and `bounds` makes it a pop-up window.
+- `launch_app split=true` (experimental, with the shell helper): continue the moved app in split screen next to the user's app. `global_action` gains `split_screen`.
 - New [docs/devices.md](docs/devices.md): what works on which phone (Galaxy S24 Ultra, Galaxy S20).
 
 ### App (Android)
@@ -20,6 +21,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The background display has the phone screen's size and density by default (was 720x1560/320), so apps moved between the screens keep their state instead of being recreated (tested on a Galaxy S20: Clock moved both ways with no relaunch).
 - Own window on Android 13: the Android 14 display flags are no longer set before 14 (on Samsung they marked a "hidden space" display and every launch crashed).
 - Native window on Android 13 and older: accessibility does not cover it, so screen tools answer `native_window_not_accessible` instead of failing vaguely.
+- Shell helper: errors now reach the app (some exception types were dropped by binder and looked like an empty success); a task moved back from a freeform display is made full screen.
 - `unlock_device`: swipes up when the PIN pad does not open, checks each key in the PIN field and never presses OK unless the count matches (a key that did not register cannot cost a wrong attempt). Tested on a Galaxy S20: 3/3 from screen off.
 
 ## [1.0.0] - 2026-11-21

@@ -133,6 +133,7 @@ class DroidHandAccessibilityService : AccessibilityService() {
         "quick_settings" -> performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
         "lock_screen" -> performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
         "screenshot" -> performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
+        "split_screen" -> performGlobalAction(GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN)
         else -> false
     }
 
