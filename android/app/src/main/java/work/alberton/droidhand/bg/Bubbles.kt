@@ -11,7 +11,6 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import work.alberton.droidhand.R
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -21,9 +20,10 @@ import kotlin.math.hypot
  * under the Stop button and changes with the window:
  * - MINIMIZE: own window shown; tap = hide it (the agent keeps working);
  * - EYE: own window hidden; tap = show it again;
- * - NATIVE: native (system-drawn) window, which Android does not let us hide.
- * Dragging the bubble onto the "X" target (shown at the bottom while dragging)
- * closes the background session. Main thread only.
+ * - NATIVE: native (system-drawn) window, which Android does not let us hide
+ *   (hiding it = removing the display), so the bubble is a close button: tap = close.
+ * For EYE/MINIMIZE, dragging the bubble onto the "X" target (shown at the bottom
+ * while dragging) closes the background session. Main thread only.
  */
 class Bubbles(private val ctx: Context, private val session: BackgroundSession) {
     private val wm = ctx.getSystemService(WindowManager::class.java)
@@ -65,7 +65,7 @@ class Bubbles(private val ctx: Context, private val session: BackgroundSession) 
         val (icon, color, desc) = when (k) {
             Kind.EYE -> Triple(R.drawable.ic_eye, "#1E88E5", R.string.cd_show_bg)
             Kind.MINIMIZE -> Triple(R.drawable.ic_minimize, "#5E6472", R.string.cd_hide_bg)
-            Kind.NATIVE -> Triple(R.drawable.ic_window, "#5E6472", R.string.cd_handle_bg)
+            Kind.NATIVE -> Triple(R.drawable.ic_close_window, "#5E6472", R.string.cd_handle_bg)
         }
         val v = ImageView(ctx).apply {
             setImageResource(icon)
@@ -88,7 +88,7 @@ class Bubbles(private val ctx: Context, private val session: BackgroundSession) 
                 MotionEvent.ACTION_DOWN -> { downX = e.rawX; downY = e.rawY; sx = lp.x; sy = lp.y; moved = false }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = e.rawX - downX; val dy = e.rawY - downY
-                    if (!moved && (abs(dx) > ctx.dp(6f) || abs(dy) > ctx.dp(6f))) { moved = true; showTarget() }
+                    if (!moved && (abs(dx) > ctx.dp(6f) || abs(dy) > ctx.dp(6f))) { moved = true; if (k != Kind.NATIVE) showTarget() }
                     if (moved) {
                         // Gravity END: x grows to the left.
                         lp.x = sx - dx.toInt(); lp.y = sy + dy.toInt()
@@ -105,7 +105,7 @@ class Bubbles(private val ctx: Context, private val session: BackgroundSession) 
                         moved -> Unit
                         k == Kind.EYE -> session.show()
                         k == Kind.MINIMIZE -> session.hide()
-                        else -> Toast.makeText(ctx, R.string.float_handle_hint, Toast.LENGTH_SHORT).show()
+                        else -> session.close("user")
                     }
                 }
             }

@@ -314,7 +314,7 @@ The agent can drive apps on a second display while the operator keeps using the 
 | Needs | WRITE_SECURE_SETTINGS only — **works with debugging OFF** | Shell helper started over ADB (`own_helper_start`); **debugging must stay ON** for the whole session (Android kills shell-user processes when it turns off — measured) |
 | Window | Drawn by the system (translucent, fixed look) | Ours: opacity setting (opaque by default), resizable from the corner, draggable |
 | Hide while the agent keeps working | ✗ | ✓ "Esconder" → eye bubble to bring it back; the display keeps rendering into an off-screen sink (a display with no surface turns OFF and its apps stop) |
-| Close | Drag our handle onto the X bubble; apps move behind the user's apps | Drag the title bar onto the X bubble; the display and its apps are destroyed |
+| Close | Tap our close bubble (square with an X); apps move behind the user's apps | Drag the title bar onto the X bubble; the display and its apps are destroyed |
 | Operator interaction | Through the system window | Touches injected into the display (INJECT_EVENTS), back button |
 | Stop | Small red Stop bubble (shown while the agent acts, pinned during background sessions) cancels the current action only; the agent gets `stopped_by_user` on that/next call; nothing needs re-enabling. Full kill switch = notification Disconnect / app / `panic_disconnect` |
 

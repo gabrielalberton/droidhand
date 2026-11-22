@@ -68,7 +68,7 @@
     <string name="bg_agent">Deixar o agente decidir</string>
     <string name="bg_agent_desc">O agente usa a janela própria quando pode ligar a depuração (seu teclado não é afetado); senão, a nativa.</string>
     <string name="bg_native">Nativa</string>
-    <string name="bg_native_desc">Janela desenhada pelo sistema. Funciona com a depuração desligada. Atenção: enquanto ela estiver na tela, seu teclado fecha sempre que o agente toca nela ou abre uma tela nova, o que dificulta digitar. Arraste a alça até o X para fechar.</string>
+    <string name="bg_native_desc">Janela desenhada pelo sistema. Funciona com a depuração desligada. Atenção: enquanto ela estiver na tela, seu teclado fecha sempre que o agente toca nela ou abre uma tela nova, o que dificulta digitar. Toque no botão de fechar (quadrado com X) para fechar.</string>
     <string name="bg_own">Janela própria</string>
     <string name="bg_own_desc">Não atrapalha seu teclado. Pode esconder, redimensionar, ajustar a opacidade e interagir. Liga a depuração só enquanto a janela está aberta e fecha se a tela do celular apagar.</string>
     <string name="bg_opacity">Opacidade da janela</string>
@@ -124,7 +124,6 @@
     <string name="back">Voltar</string>
 
     <string name="float_hide">Esconder</string>
-    <string name="float_handle_hint">Arraste até o X para fechar a tela de fundo</string>
     <string name="float_help_done">(toque aqui quando terminar)</string>
     <string name="float_agent_stopped">DroidHand: agente parado</string>
     <string name="cd_show_bg">Mostrar a janela de fundo do DroidHand</string>
@@ -132,7 +131,7 @@
     <string name="cd_hide_bg">Esconder a janela de fundo (o agente continua trabalhando)</string>
     <string name="cd_back_bg">Voltar (janela de fundo)</string>
     <string name="cd_resize_bg">Redimensionar a janela de fundo</string>
-    <string name="cd_handle_bg">Janela de fundo do DroidHand: arraste até o X para fechar</string>
+    <string name="cd_handle_bg">Fechar a janela de fundo do DroidHand</string>
     <string name="cd_stop">Parar a ação atual do agente</string>
     <string name="float_action_cancelled">DroidHand: ação cancelada</string>
     <string name="tile_on">Agente ligado · toque para desconectar</string>

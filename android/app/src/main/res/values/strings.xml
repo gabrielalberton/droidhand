@@ -72,7 +72,7 @@
     <string name="bg_agent">Let the agent decide</string>
     <string name="bg_agent_desc">The agent uses its own window when it can turn debugging on (your keyboard is not affected); otherwise the native one.</string>
     <string name="bg_native">Native</string>
-    <string name="bg_native_desc">Window drawn by the system. Works with debugging off. Note: while it is on screen, your keyboard closes whenever the agent touches it or opens a new screen in it, which makes typing hard. Drag the handle to the X to close it.</string>
+    <string name="bg_native_desc">Window drawn by the system. Works with debugging off. Note: while it is on screen, your keyboard closes whenever the agent touches it or opens a new screen in it, which makes typing hard. Tap the close button (square with an X) to close it.</string>
     <string name="bg_own">Own window</string>
     <string name="bg_own_desc">Does not disturb your keyboard. Can be hidden, resized, made translucent and used. Turns debugging on only while the window is open, and closes if the phone screen turns off.</string>
     <string name="bg_opacity">Window opacity</string>
@@ -131,7 +131,6 @@
 
     <!-- Floating controls -->
     <string name="float_hide">Hide</string>
-    <string name="float_handle_hint">Drag to the X to close the background window</string>
     <string name="float_help_done">(tap here when done)</string>
     <string name="float_agent_stopped">DroidHand: agent stopped</string>
     <string name="cd_show_bg">Show DroidHand background window</string>
@@ -139,7 +138,7 @@
     <string name="cd_hide_bg">Hide background window (the agent keeps working)</string>
     <string name="cd_back_bg">Back (background window)</string>
     <string name="cd_resize_bg">Resize background window</string>
-    <string name="cd_handle_bg">DroidHand background window: drag to the X to close</string>
+    <string name="cd_handle_bg">Close the DroidHand background window</string>
     <string name="cd_stop">Stop the agent\'s current action</string>
     <string name="float_action_cancelled">DroidHand: action cancelled</string>
     <string name="tile_on">Agent on · tap to disconnect</string>
