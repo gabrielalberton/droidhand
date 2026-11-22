@@ -38,7 +38,7 @@ class RelayClient(context: Context) {
         .build()
 
     /** Tools run one at a time, off the socket reader thread (gestures block until done). */
-    private val worker = Executors.newSingleThreadExecutor()
+    @Volatile private var worker = Executors.newSingleThreadExecutor()
     private var ws: WebSocket? = null
     @Volatile private var running = false
     @Volatile private var unauthorized = false
@@ -145,6 +145,13 @@ class RelayClient(context: Context) {
 
         override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
             if (code == 4003 && running) { _state.value = State.UNAUTHORIZED; unauthorized = true }
+            // The relay gave up on us (commands timed out): a tool may be stuck, so
+            // start with a fresh worker instead of queueing behind it.
+            if (code == CLOSE_UNRESPONSIVE) {
+                val old = worker
+                worker = Executors.newSingleThreadExecutor()
+                old.shutdownNow()
+            }
             webSocket.close(1000, null)
         }
 
@@ -163,6 +170,8 @@ class RelayClient(context: Context) {
     enum class State { OFF, NOT_CONFIGURED, CONNECTING, CONNECTED, UNAUTHORIZED }
 
     companion object {
+        /** Relay close code: this phone stopped answering commands. */
+        private const val CLOSE_UNRESPONSIVE = 4002
         private val _state = MutableStateFlow(State.OFF)
         val state: StateFlow<State> = _state
 

@@ -165,3 +165,29 @@ test("relay: a new session replaces the old one (4000); disconnect severs it", a
     await assert.rejects(relay.dispatch("p1", "tap", {}), /not connected/);
   });
 });
+
+test("relay: a phone that stops answering is closed with 4002 so it reconnects", async () => {
+  const relay = new Relay("127.0.0.1", 0, new Map([["tok", "p1"]]), 100);
+  await relay.start();
+  try {
+    const p = new RawPhone(`ws://127.0.0.1:${relay.address()?.port}`);
+    await p.opened;
+    p.send(hello("tok"));
+    await p.next((f) => f.event === "welcome");
+    // One timeout alone keeps the session (a slow tool is not a frozen phone).
+    await assert.rejects(relay.dispatch("p1", "tap", {}), /timeout/);
+    assert.equal(relay.isConnected("p1"), true);
+    // An answer resets the count.
+    const ok = relay.dispatch("p1", "long_press", {});
+    const cmd = await p.next((f) => f.type === "cmd" && f.tool === "long_press");
+    p.send({ type: "result", id: cmd.id, ok: true, data: 1 });
+    await ok.catch(() => undefined);
+    await assert.rejects(relay.dispatch("p1", "swipe", {}), /timeout/);
+    assert.equal(relay.isConnected("p1"), true);
+    await assert.rejects(relay.dispatch("p1", "scroll", {}), /timeout/);
+    assert.equal(await p.closed, CloseCode.Unresponsive);
+    assert.equal(relay.isConnected("p1"), false);
+  } finally {
+    await relay.stop();
+  }
+});

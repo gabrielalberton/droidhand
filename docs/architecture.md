@@ -52,7 +52,7 @@ One JSON text frame per message, each with a string `type` (source of truth: [`m
 
 **Several phones.** One relay can serve several phones (see [setup](setup.md#several-phones)). Each phone has its own token, which also tells the relay which phone it is; a new session of the same phone replaces the old one. Agents pick the phone with the `device` argument (`list_devices` lists them); when more than one phone is connected and `device` is missing the call fails instead of guessing. `relay_status` (relay version, attached agent sessions, every phone and its state) is answered only for phones with `"role": "admin"`; the app shows it in **Relay**, read-only.
 
-Close codes: **4000** session replaced or severed (`panic_disconnect`), **4001** no `hello` in time, **4003** bad token. With no token configured the relay rejects everyone. The app reconnects with backoff, and comes back after reboots and app updates together with its accessibility service.
+Close codes: **4000** session replaced or severed (`panic_disconnect`), **4001** no `hello` in time, **4002** unresponsive (two commands in a row timed out; the app reconnects with a fresh worker), **4003** bad token. With no token configured the relay rejects everyone. The app reconnects with backoff, and comes back after reboots and app updates together with its accessibility service.
 
 ## Inside the app
 

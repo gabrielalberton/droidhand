@@ -4,6 +4,12 @@ import { CloseCode, encodeFrame, parseFrame, type DeviceInfo, type Frame } from 
 
 /** Grace period for the first (hello) frame before the socket is closed. */
 export const AUTH_TIMEOUT_MS = 5000;
+/**
+ * After this many commands in a row time out, the session is closed (4002) so the
+ * phone reconnects: a phone can look connected while it no longer answers (e.g.
+ * Samsung froze the app in the background).
+ */
+export const UNRESPONSIVE_AFTER = 2;
 
 interface Pending {
   device: string;
@@ -42,6 +48,8 @@ export class Relay {
   private wss: WebSocketServer | null = null;
   private readonly sessions = new Map<string, Session>();
   private readonly lastSeenAt = new Map<string, Date>();
+  /** Commands in a row that timed out, per phone. */
+  private readonly timeouts = new Map<string, number>();
   private readonly pending = new Map<string, Pending>();
   private readonly eventHandlers = new Set<EventHandler>();
   private requestHandler: RequestHandler | null = null;
@@ -129,6 +137,15 @@ export class Relay {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`timeout after ${this.cmdTimeoutMs}ms waiting for '${tool}'`));
+        const n = (this.timeouts.get(device) ?? 0) + 1;
+        this.timeouts.set(device, n);
+        const s = this.sessions.get(device);
+        if (n >= UNRESPONSIVE_AFTER && s?.ws === ws) {
+          this.timeouts.delete(device);
+          this.sessions.delete(device);
+          this.rejectPending(device, "device unresponsive");
+          s.ws.close(CloseCode.Unresponsive, "unresponsive");
+        }
       }, this.cmdTimeoutMs);
       this.pending.set(id, { device, resolve, reject, timer });
       ws.send(encodeFrame({ type: "cmd", id, tool, args }));
@@ -176,6 +193,7 @@ export class Relay {
           this.rejectPending(id, "replaced by new session");
           old.ws.close(CloseCode.Replaced, "replaced by new session");
         }
+        this.timeouts.delete(id);
         this.sessions.set(id, { ws, info: (frame as { device: DeviceInfo }).device ?? { suggestionLogging: false }, connectedSince: new Date() });
         this.lastSeenAt.set(id, new Date());
         // Lets the app show "connected" only once the token was accepted.
@@ -204,6 +222,7 @@ export class Relay {
     if (frame.type === "result") {
       const p = this.pending.get(frame.id);
       if (!p || p.device !== device) return;
+      this.timeouts.delete(device);
       clearTimeout(p.timer);
       this.pending.delete(frame.id);
       if (frame.ok) p.resolve(frame.data);

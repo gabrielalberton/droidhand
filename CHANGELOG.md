@@ -9,10 +9,12 @@ All notable changes to this project are documented here. The format follows [Kee
 - Every per-phone tool takes an optional `device`; new `list_devices`. With more than one phone connected, a call without `device` fails instead of guessing. `panic_disconnect` without `device` severs every phone. Audit lines and control-channel events carry the device.
 - ADB mode `always` for test phones: sessions only connect to a fixed serial and never turn debugging off; optional `reverse` keeps `adb reverse` of the relay port for phones without Tailscale.
 - Protocol: phones may ask the relay (`req`/`res`); `relay_status` answers admin phones only. The welcome now carries the phone's id.
+- A phone that looks connected but stops answering (e.g. frozen by the system in the background) is closed with code 4002 after two commands in a row time out, so it reconnects instead of staying a dead session.
 
 ### App (Android)
 - New **Relay** screen (read-only): relay version, agent sessions and every phone with its connection state, model, app version and ADB mode. Only phones marked admin on the relay can see it.
 - Native background window opens with `own_content_only`: on Samsung One UI it no longer shows the DeX launcher and taskbar, and apps open full screen instead of as freeform windows.
+- When the relay closes the session as unresponsive (4002), the app reconnects with a fresh tool worker, so a stuck tool no longer blocks the next commands.
 
 ## [1.0.0] - 2026-11-21
 

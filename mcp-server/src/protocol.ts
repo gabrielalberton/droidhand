@@ -115,6 +115,8 @@ export const CloseCode = {
   /** Replaced by a newer session, or severed by panic_disconnect. */
   Replaced: 4000,
   AuthTimeout: 4001,
+  /** The phone stopped answering commands (e.g. frozen by the system): reconnect. */
+  Unresponsive: 4002,
   Unauthorized: 4003,
 } as const;
 
