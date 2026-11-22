@@ -55,9 +55,16 @@ object ShellMain {
     /** Android 14+: launches/touches on this display never take the top focus (the user's keyboard stays). */
     private const val STEAL_TOP_FOCUS_DISABLED = 1 shl 16
 
-    const val FLAGS = PUBLIC or OWN_CONTENT_ONLY or SUPPORTS_TOUCH or ROTATES_WITH_CONTENT or
+    /**
+     * OWN_FOCUS and STEAL_TOP_FOCUS_DISABLED exist from Android 14 only. Before that the
+     * bits mean something else: on Samsung Android 13, bit 16 marks a "hidden space"
+     * display and every launch onto it crashes the system's multi-window code (NPE in
+     * MultiTaskingTaskLaunchParamsModifier), so they are only set on 14+.
+     */
+    val FLAGS = PUBLIC or OWN_CONTENT_ONLY or SUPPORTS_TOUCH or ROTATES_WITH_CONTENT or
         DESTROY_CONTENT_ON_REMOVAL or TRUSTED or OWN_DISPLAY_GROUP or ALWAYS_UNLOCKED or
-        TOUCH_FEEDBACK_DISABLED or OWN_FOCUS or STEAL_TOP_FOCUS_DISABLED
+        TOUCH_FEEDBACK_DISABLED or
+        (if (android.os.Build.VERSION.SDK_INT >= 34) OWN_FOCUS or STEAL_TOP_FOCUS_DISABLED else 0)
 
     private val displays = ConcurrentHashMap<Int, VirtualDisplay>()
     private lateinit var dm: DisplayManager
@@ -159,6 +166,31 @@ object ShellMain {
             val code = start.invoke(iam, null, SHELL_PKG, null, intent, null, null, null, 0, 0, null, opts.toBundle(), -2) as Int
             if (code < 0) throw IllegalStateException("startActivity returned $code")
             return "shell"
+        }
+
+        override fun moveTask(fromDisplay: Int, packageName: String, toDisplay: Int, bounds: IntArray?): Int = onMainLooper {
+            val atm = Class.forName("android.app.ActivityTaskManager").getMethod("getService").invoke(null)
+            val itf = Class.forName("android.app.IActivityTaskManager")
+            @Suppress("UNCHECKED_CAST")
+            val roots = itf.getMethod("getAllRootTaskInfosOnDisplay", Int::class.javaPrimitiveType)
+                .invoke(atm, fromDisplay) as List<Any>
+            /** Public field of TaskInfo (declared on a superclass of RootTaskInfo). */
+            fun field(o: Any, name: String): Any? = runCatching { o.javaClass.getField(name).get(o) }.getOrNull()
+            // Root tasks come top first; the visible app tasks have a top activity.
+            val pick = roots.firstOrNull { r ->
+                val top = field(r, "topActivity") as? android.content.ComponentName ?: return@firstOrNull false
+                packageName.isEmpty() || top.packageName == packageName
+            } ?: throw IllegalArgumentException(
+                if (packageName.isEmpty()) "no app on display $fromDisplay" else "$packageName is not open on display $fromDisplay")
+            val taskId = field(pick, "taskId") as Int
+            itf.getMethod("moveRootTaskToDisplay", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+                .invoke(atm, taskId, toDisplay)
+            if (bounds != null && bounds.size == 4) {
+                // Same as `am task resize`: a freeform (pop-up) window at these bounds.
+                itf.getMethod("resizeTask", Int::class.javaPrimitiveType, android.graphics.Rect::class.java, Int::class.javaPrimitiveType)
+                    .invoke(atm, taskId, android.graphics.Rect(bounds[0], bounds[1], bounds[2], bounds[3]), 0)
+            }
+            taskId
         }
 
         override fun pid(): Int = Process.myPid()

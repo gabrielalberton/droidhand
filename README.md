@@ -103,7 +103,7 @@ DroidHand gives software **full control of a phone**. Only use it on a device **
 | [`android/`](android/) | The DroidHand app (Kotlin, Jetpack Compose) |
 | [`mcp-server/`](mcp-server/) | Relay daemon + MCP adapter (TypeScript) |
 | [`deploy/`](deploy/) | Relay setup, systemd unit, phone install script |
-| [`docs/`](docs/) | [Setup](docs/setup.md), [architecture & protocol](docs/architecture.md), [tools](docs/tools.md), [locked-screen findings](docs/locked-screen-findings.md), [design doc](docs/PRD.md) |
+| [`docs/`](docs/) | [Setup](docs/setup.md), [architecture & protocol](docs/architecture.md), [tools](docs/tools.md), [what works on which phone](docs/devices.md), [locked-screen findings](docs/locked-screen-findings.md), [design doc](docs/PRD.md) |
 | [`scripts/release.sh`](scripts/release.sh) | Builds a signed release (APK, server tarball, checksums) |
 
 ## Status

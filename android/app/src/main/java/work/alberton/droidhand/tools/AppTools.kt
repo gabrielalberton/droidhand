@@ -51,6 +51,15 @@ class AppTools : ToolGroup {
                 app.startActivity(intent, opts.toBundle())
             }
             else -> {
+                // Back from the background display: with the shell helper, move that exact task
+                // (an intent would pick the user's own copy if the app is also open on the main screen).
+                val bgDisplay = ctx.svc?.let { s -> runCatching { s.bg.takeIf { it.active }?.displayId }.getOrNull() }
+                if (move && bgDisplay != null) ShellBridge.helper?.let { h ->
+                    val task = runCatching { h.moveTask(bgDisplay, pkg, 0, bounds?.let { b -> IntArray(4) { b.getInt(it) } }) }
+                        .onFailure { Log.w("DroidHand", "helper moveTask failed", it) }.getOrNull()
+                    if (task != null) return ToolResult.ok(JSONObject().put("launched", pkg).put("display", 0)
+                        .put("moved", true).put("task", task).put("via", "shell"))
+                }
                 // Main screen. With move, explicitly: the task may live on a background display.
                 if (move) opts.setLaunchDisplayId(0)
                 // One UI: launch bounds on the main display open the app as a pop-up (freeform) window.

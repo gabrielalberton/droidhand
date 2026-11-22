@@ -55,6 +55,8 @@ class ToolRouter(context: Context) {
                 return ToolResult.fail("${BackgroundSession.INDICATORS_ERROR} ($why). The background session was closed; " +
                     "do not continue there. Tell the user, or try bg_open again later.")
             }
+            if (bg.mode == BackgroundSession.Mode.NATIVE && tool in ToolPolicy.NEEDS_A11Y_ON_DISPLAY &&
+                android.os.Build.VERSION.SDK_INT < ToolPolicy.NATIVE_A11Y_MIN_SDK) return ToolResult.fail(ToolPolicy.NATIVE_NO_A11Y)
         }
         // Main screen while the user is using the phone: ask first (background windows never ask).
         if (ToolPolicy.needsMainScreenGate(tool, display, args.has("bounds"))) {

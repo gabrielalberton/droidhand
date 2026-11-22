@@ -39,12 +39,23 @@ class Unlocker(private val svc: DroidHandAccessibilityService) {
         }
 
         openPinPad()
-        val keys = waitForKeys(4000)
+        // Some lock screens (One UI 5) ignore the dismiss request: swipe up to reveal the pad.
+        val keys = waitForKeys(2500) ?: run { swipeUp(); waitForKeys(2500) }
             ?: return fail("PIN pad not found on the lock screen", seen())
-        for (ch in pin) {
+        // Each key must show up as one more dot in the PIN field before the next one.
+        // If the field can be read and the count does not match, clear it and stop
+        // before OK: a key that did not register must never cost a wrong attempt.
+        val canCount = entryLength() == 0
+        for ((i, ch) in pin.withIndex()) {
             val node = keys[ch] ?: return fail("key '${if (ch.isDigit()) "digit" else "char"}' not found", seen())
-            if (!press(node)) return fail("could not press a PIN key", null)
-            SystemClock.sleep(90)
+            if (!pressCounted(node, i + 1, canCount)) {
+                clearEntry()
+                return fail("the PIN keys did not respond (nothing was submitted)", null)
+            }
+        }
+        if (canCount && entryLength() != pin.length) {
+            clearEntry()
+            return fail("the PIN field does not match what was typed (nothing was submitted)", null)
         }
         if (waitUnlocked(1200)) return ok()
         // Not auto-confirmed: press OK/Enter.
@@ -53,6 +64,55 @@ class Unlocker(private val svc: DroidHandAccessibilityService) {
     }
 
     private fun ok() = JSONObject().put("unlocked", true)
+
+    /**
+     * Press a key and wait for the PIN field to hold [want] characters; when an
+     * accessibility click does not register (seen on One UI 5), tap the key instead.
+     * Without a readable field, falls back to a plain press.
+     */
+    private fun pressCounted(n: AccessibilityNodeInfo, want: Int, canCount: Boolean): Boolean {
+        if (!canCount) return press(n).also { SystemClock.sleep(90) }
+        if (n.isClickable) n.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        if (waitEntry(want, 400)) return true
+        if (entryLength() >= want) return false // registered twice: give up
+        if (!tap(n)) return false
+        return waitEntry(want, 600)
+    }
+
+    private fun waitEntry(want: Int, ms: Long): Boolean {
+        val end = SystemClock.elapsedRealtime() + ms
+        while (SystemClock.elapsedRealtime() < end) {
+            val n = entryLength()
+            if (n == want) return true
+            if (n > want) return false
+            SystemClock.sleep(40)
+        }
+        return entryLength() == want
+    }
+
+    /** Characters (dots) in the lock screen's PIN field, or -1 if it cannot be read. */
+    private fun entryLength(): Int {
+        val field = keyguardNodes().firstOrNull { n ->
+            n.isVisibleToUser && (n.isPassword || n.viewIdResourceName.orEmpty().lowercase().endsWith("pinentry"))
+        } ?: return -1
+        return field.text?.length ?: 0
+    }
+
+    /** Delete what was typed (so a half-typed PIN is never submitted later). */
+    private fun clearEntry() {
+        val del = keyguardNodes().firstOrNull { n ->
+            n.isVisibleToUser && n.viewIdResourceName.orEmpty().lowercase().let { it.endsWith("delete_button") || it.endsWith("delete") }
+        } ?: return
+        repeat(maxOf(entryLength(), 0) + 2) { press(del); SystemClock.sleep(60) }
+    }
+
+    private fun swipeUp() {
+        val m = svc.resources.displayMetrics
+        val prev = svc.displayId
+        svc.displayId = 0
+        svc.swipe(m.widthPixels / 2, m.heightPixels * 85 / 100, m.widthPixels / 2, m.heightPixels * 30 / 100, 250)
+        svc.displayId = prev
+    }
 
     private fun fail(why: String, seen: JSONArray?, wrongPin: Boolean = false): JSONObject {
         if (wrongPin) prefs.pinUnlockEnabled = false // never risk a second wrong attempt
@@ -129,6 +189,10 @@ class Unlocker(private val svc: DroidHandAccessibilityService) {
 
     private fun press(n: AccessibilityNodeInfo): Boolean {
         if (n.isClickable && n.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
+        return tap(n)
+    }
+
+    private fun tap(n: AccessibilityNodeInfo): Boolean {
         val r = Rect().also { n.getBoundsInScreen(it) }
         if (r.isEmpty) return false
         val prev = svc.displayId

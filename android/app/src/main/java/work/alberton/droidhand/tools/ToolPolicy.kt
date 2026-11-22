@@ -15,6 +15,21 @@ object ToolPolicy {
         "go_home", "launch_app", "open_url", "set_setting", "bg_open", "request_user_help",
     )
 
+    /** Tools that read or touch a display through accessibility. */
+    val NEEDS_A11Y_ON_DISPLAY = setOf(
+        "screen_snapshot", "tap", "long_press", "swipe", "scroll", "type_text", "list_windows", "get_foreground_app",
+    )
+
+    /**
+     * Before this Android version accessibility leaves out overlay displays (the native
+     * background window): seen on Android 13 (Galaxy S20); works on SDK 37 (S24); 34–36 untested.
+     */
+    const val NATIVE_A11Y_MIN_SDK = 34
+
+    const val NATIVE_NO_A11Y = "native_window_not_accessible: on this phone's Android version accessibility does not " +
+        "cover the native background window, so it can only be seen (screen_capture), not read or touched. " +
+        "Close it and use bg_open mode=own (needs an ADB session) instead."
+
     /** Actions that change what the user sees on the main screen (asked first while the user is using the phone). */
     val MAIN_GATED = setOf(
         "tap", "long_press", "swipe", "scroll", "type_text", "key_event", "global_action",
