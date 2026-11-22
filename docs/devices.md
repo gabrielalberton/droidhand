@@ -31,9 +31,22 @@ app usually keeps running instead of being recreated.
 | Background → main screen | Yes, not recreated (Calculator) | Yes |
 | Background → main when the app is also open on the main screen | Untested | Without the helper Android picks the main-screen copy (wrong one). With the helper the exact task is moved (2026-11-22) |
 | Background → main as a pop-up window (`bounds`) | Untested | With the helper: yes, not recreated. Without it: no (bounds ignored, app recreated) |
-| Background → split screen (`split=true`, experimental, needs the helper) | Untested | Yes: the exact task goes to the top half, recreated (own window) but the stopwatch kept its state. The accessibility "toggle split screen" action fails on One UI 5, and an intent with LAUNCH_ADJACENT always opens a new copy. Known issue: the bottom half may get the wrong app when the user's top task is translucent |
+| Background → split screen (`split=true`, experimental, needs the helper) | Untested | Yes: the exact task goes to the top half, recreated (own window) but the stopwatch kept its state. The accessibility "toggle split screen" action fails on One UI 5, and an intent with LAUNCH_ADJACENT always opens a new copy. One UI pulls older copies of the same app into the bottom half; the helper puts the user's app back on top (fixed 2026-11-22). Known issue: the bottom half may get the wrong app when the user's top task is translucent |
 | Moved back without `bounds` | Full screen | Full screen (the helper turns the freeform task full screen) |
 | Closing the native window | Its apps move to the main screen, on top | Same: on top, full screen |
+
+## Every tool on the S20 (2026-11-22)
+
+All 37 tools were run on the S20 on the main screen, the native window and the own window.
+
+| Area | Result |
+|---|---|
+| Perception, interaction, settings, apps, lock, ADB, suggestions, audit | Work. `set_setting` refuses keys outside the allowlist |
+| Main screen | Work after the prompt. A tap under the Stop button cancelled the agent's own action (fixed: the button moves away first) |
+| Native window | `launch_app`, `screen_capture`, `open_url`, `bg_status`/`bg_show` work; screen tools answer `native_window_not_accessible` (Android 13). `bg_hide` is own-window only |
+| Own window | Everything works, taps as mouse clicks. Keys: back and enter work; home does nothing on Android 13 (now refused); recents opened on the main screen (now refused). Apps open with a caption bar (freeform). After moving the only app out, the window keeps showing its last frame |
+| Fixed during the run | `global_action`/`go_home`/`open_url` with a background display acted on the main screen without asking; a native window left over after an app update made `bg_open` fail; Stop button drawn under the own window; second screenshot within 1 s failed |
+| `panic_disconnect` | Works: the app stops and debugging is turned off even on the `always` test phone, so the phone must be reopened by hand. Run it last |
 
 ## Other
 

@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `launch_app` takes `move`: reuse the app's existing task and move it between the background display and the main screen ("continue on the main screen"), instead of opening a separate copy. With the shell helper the exact task is moved back (never the user's own copy) and `bounds` makes it a pop-up window.
 - `launch_app split=true` (experimental, with the shell helper): continue the moved app in split screen next to the user's app. `global_action` gains `split_screen`.
 - New [docs/devices.md](docs/devices.md): what works on which phone (Galaxy S24 Ultra, Galaxy S20).
+- Tool descriptions: `open_url`, `key_event`, `go_home`, `global_action` and `panic_disconnect` say what they do on a background display and that a panic also stops the app until someone reopens it on the phone.
 
 ### App (Android)
 - New **Relay** screen (read-only): relay version, agent sessions and every phone with its connection state, model, app version and ADB mode. Only phones marked admin on the relay can see it.
@@ -22,6 +23,14 @@ All notable changes to this project are documented here. The format follows [Kee
 - Own window on Android 13: the Android 14 display flags are no longer set before 14 (on Samsung they marked a "hidden space" display and every launch crashed).
 - Native window on Android 13 and older: accessibility does not cover it, so screen tools answer `native_window_not_accessible` instead of failing vaguely.
 - Shell helper: errors now reach the app (some exception types were dropped by binder and looked like an empty success); a task moved back from a freeform display is made full screen.
+- **The agent's own taps no longer hit the Stop button.** A tap on an element under the floating Stop button (the Settings search icon, seen on a Galaxy S20) cancelled the agent's own action as if the user had tapped Stop. The button now moves out of the way of every tap and swipe first.
+- **Background display tools no longer touch the main screen.** `global_action` with a background `display` is refused (it opened the notification shade on the user's screen without asking); `go_home` and `key_event` there use the display's own keys; `recents` is refused there (it opened on the main screen); `open_url` opens on the background display in the agent's own copy of the browser (it opened on the main screen, and a browser like Chrome pulled the user's tab off it).
+- The main-screen prompt closing without an answer (screen off, Stop, app restart) now answers `prompt_closed` instead of claiming the user said "not now".
+- Native background window: a window left over after the app restarted (update, crash) no longer makes the next `bg_open` fail.
+- The Stop button stays on top of the own background window (it was drawn under its edge).
+- `screen_capture` waits and retries when Android refuses a second screenshot within a second, and names the reason instead of "secure screen or rate limit".
+- `key_event`, `go_home` and `global_action` return what they did, and an error message when the system refuses (it was an empty error).
+- Split screen: the user's app stays on top of the bottom half when One UI pulls another copy of the moved app into it.
 - `unlock_device`: swipes up when the PIN pad does not open, checks each key in the PIN field and never presses OK unless the count matches (a key that did not register cannot cost a wrong attempt). Tested on a Galaxy S20: 3/3 from screen off.
 
 ## [1.0.0] - 2026-11-21

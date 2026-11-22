@@ -58,6 +58,46 @@ class StopButton(private val service: AccessibilityService, private val onStop: 
         return isOnScreen
     }
 
+    /**
+     * Worker thread: if a gesture of the agent would land on the button (points along its
+     * path, in screen px), move the button to a free height first. Otherwise the agent's own
+     * tap is taken as the user tapping Stop (seen on the Settings search icon, 2026-11-22).
+     */
+    fun avoid(points: List<IntArray>) {
+        if (points.isEmpty()) return
+        val done = java.util.concurrent.CountDownLatch(1)
+        var moved = false
+        main.post {
+            try {
+                val v = view ?: return@post
+                val lp = params ?: return@post
+                if (v.parent == null) return@post
+                val loc = IntArray(2).also { v.getLocationOnScreen(it) }
+                val m = dp(12f)
+                fun hits(top: Int, left: Int) = points.any { p ->
+                    p[0] in (left - m)..(left + v.width + m) && p[1] in (top - m)..(top + v.height + m)
+                }
+                if (!hits(loc[1], loc[0])) return@post
+                val h = service.resources.displayMetrics.heightPixels
+                val dy = loc[1] - lp.y // window y vs screen y (status bar offset)
+                val free = listOf(h / 3, h / 2, h * 2 / 3, h / 5, h * 4 / 5, h / 8, h * 7 / 8)
+                    .firstOrNull { !hits(it + dy, loc[0]) } ?: return@post
+                lp.y = free
+                runCatching { wm.updateViewLayout(v, lp) }.onSuccess { moved = true }
+            } finally { done.countDown() }
+        }
+        done.await(500, java.util.concurrent.TimeUnit.MILLISECONDS)
+        if (moved) Thread.sleep(80) // let the window move before the gesture is injected
+    }
+
+    /** Main thread: re-add the button so it sits above overlays added after it (the background window). */
+    fun raise() {
+        val v = view ?: return
+        val lp = params ?: return
+        if (v.parent == null) return
+        runCatching { wm.removeViewImmediate(v); wm.addView(v, lp) }.onFailure { view = null }
+    }
+
     fun hide() {
         main.post {
             main.removeCallbacks(hideRunnable)

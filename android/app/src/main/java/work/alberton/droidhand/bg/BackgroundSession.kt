@@ -30,6 +30,8 @@ class BackgroundSession(
     private val onActiveChanged: (Boolean) -> Unit,
     /** Main thread: makes sure the stop button is on screen; true if it is. */
     private val ensureStopButton: () -> Boolean,
+    /** Main thread: puts the stop button back on top of our window (same overlay type: last added wins). */
+    private val raiseStopButton: () -> Unit = {},
 ) {
     enum class Mode { NATIVE, OWN }
 
@@ -86,9 +88,10 @@ class BackgroundSession(
                 displayId = helper.createDisplay("DroidHand", w, h, density, null)
                 mode = Mode.OWN; hidden = false
                 onMain { attachSurface(null) } // keep the display on until our window has a surface
-                onMain { window.show(); bubbles.showMinimize() }
+                onMain { window.show(); bubbles.showMinimize(); raiseStopButton() }
             }
             Mode.NATIVE -> {
+                clearStaleOverlay()
                 val before = dm.displays.map { it.displayId }.toSet()
                 // own_content_only: Samsung otherwise puts its DeX launcher and taskbar on the
                 // display and opens apps as freeform windows; with it apps open full screen.
@@ -156,7 +159,7 @@ class BackgroundSession(
     fun show(): Boolean {
         if (mode != Mode.OWN) return mode == Mode.NATIVE
         hidden = false
-        onMain { window.show(); bubbles.showMinimize(); helpPending?.let { window.setBanner(it) } }
+        onMain { window.show(); bubbles.showMinimize(); helpPending?.let { window.setBanner(it) }; raiseStopButton() }
         return true
     }
 
@@ -220,6 +223,20 @@ class BackgroundSession(
         onMain { window.hide(); bubbles.hideAll(); closeSink() }
         onActiveChanged(false)
         android.util.Log.i("DroidHand", "background session closed: $reason")
+    }
+
+    /**
+     * A native window left over from before the app restarted (update, crash, kill): the
+     * setting still holds it, so writing it again would not add a display. Remove it first.
+     */
+    private fun clearStaleOverlay() {
+        if (Settings.Global.getString(ctx.contentResolver, OVERLAY_KEY).isNullOrEmpty()) return
+        val before = dm.displays.map { it.displayId }.toSet()
+        Settings.Global.putString(ctx.contentResolver, OVERLAY_KEY, null)
+        repeat(30) {
+            if (dm.displays.map { it.displayId }.toSet() != before) return
+            Thread.sleep(100)
+        }
     }
 
     private fun waitForNewDisplay(before: Set<Int>): Int? {

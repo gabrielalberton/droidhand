@@ -15,6 +15,14 @@ internal class ScreenCapture(private val svc: DroidHandAccessibilityService) {
 
     /** JPEG screenshot (base64), scaled to at most [maxWidth] px wide. Blocks the caller (not the main thread). */
     fun capture(maxWidth: Int = 720, quality: Int = 70): JSONObject {
+        val first = captureOnce(maxWidth, quality)
+        // Android allows about one screenshot per second: wait and try once more.
+        if (first.optInt("code") != AccessibilityService.ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT) return first
+        Thread.sleep(1100)
+        return captureOnce(maxWidth, quality)
+    }
+
+    private fun captureOnce(maxWidth: Int, quality: Int): JSONObject {
         val latch = CountDownLatch(1)
         var result: JSONObject = JSONObject().put("error", "screenshot timed out")
         svc.takeScreenshot(svc.displayId, executor, object : AccessibilityService.TakeScreenshotCallback {
@@ -28,7 +36,13 @@ internal class ScreenCapture(private val svc: DroidHandAccessibilityService) {
             }
 
             override fun onFailure(errorCode: Int) {
-                result = JSONObject().put("error", "screenshot failed (code $errorCode; secure screen or rate limit)")
+                val why = when (errorCode) {
+                    AccessibilityService.ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT -> "too soon after the last one"
+                    AccessibilityService.ERROR_TAKE_SCREENSHOT_INVALID_DISPLAY -> "display not available"
+                    AccessibilityService.ERROR_TAKE_SCREENSHOT_NO_ACCESSIBILITY_ACCESS -> "no accessibility access"
+                    else -> "internal error"
+                }
+                result = JSONObject().put("error", "screenshot failed (code $errorCode: $why)").put("code", errorCode)
                 latch.countDown()
             }
         })

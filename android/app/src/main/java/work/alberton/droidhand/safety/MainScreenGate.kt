@@ -95,7 +95,8 @@ class MainScreenGate(private val svc: AccessibilityService) {
         latch.await(WAIT_MS, TimeUnit.MILLISECONDS)
         return when (answer) {
             true -> { lastAct = SystemClock.elapsedRealtime(); null }
-            false -> DECLINED
+            // reset() (screen off, Stop, service restarted) also answers false, but the user said nothing.
+            false -> if (deniedAt == 0L) CLOSED else DECLINED
             null -> WAITING // prompt stays up a little longer; a retry gets the answer
         }
     }
@@ -181,6 +182,8 @@ class MainScreenGate(private val svc: AccessibilityService) {
         const val DENY_COOLDOWN_MS = 2 * 60_000L
         const val DECLINED = "user_declined: the user is using the phone and said not now. Do not retry on the main " +
             "screen for a couple of minutes; use bg_open (background window) instead, or wait."
+        const val CLOSED = "prompt_closed: the prompt closed without an answer (screen off, Stop, or the app " +
+            "restarted). Check get_lock_state; retry if the phone is still in use, or use bg_open."
         const val WAITING = "awaiting_user: a prompt on the phone asks the user to allow main-screen control. " +
             "Retry in a few seconds, or use bg_open (background window) to work without interrupting."
     }

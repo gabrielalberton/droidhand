@@ -58,18 +58,32 @@ class ScreenTools : ToolGroup {
             ToolResult(ok, JSONObject().put("typed", ok), if (ok) null else "no focused text field")
         }
         "key_event" -> ctx.withService { s -> keyEvent(s, args.getString("key")) }
-        "global_action" -> ctx.withService { ToolResult(it.globalKey(args.getString("action"))) }
-        "go_home" -> ctx.withService { ToolResult(it.globalKey("home")) }
+        // Global actions always hit the main screen: never on behalf of a background display
+        // (the main-screen prompt only guards display 0).
+        "global_action" -> ctx.withService {
+            if (it.displayId != 0) ToolResult.fail(ToolPolicy.GLOBAL_ON_BG)
+            else done(it.globalKey(args.getString("action")), "action", args.getString("action"))
+        }
+        "go_home" -> ctx.withService { if (it.displayId != 0) keyEvent(it, "home") else done(it.globalKey("home"), "action", "home") }
         else -> null
     }
 
     private fun keyEvent(s: DroidHandAccessibilityService, key: String): ToolResult {
-        if (s.displayId == 0 || key == "enter") return ToolResult(s.globalKey(key))
+        fun pressed(ok: Boolean) = done(ok, "key", key)
+        if (s.displayId == 0 || key == "enter") return pressed(s.globalKey(key))
         // Global actions would hit the user's screen: inject into the background display instead.
+        // Recents always opens on the main screen (seen on the S20, Android 13): never from here.
+        if (key == "recents") return ToolResult.fail("recents opens on the user's main screen; not available on a background display")
+        // Android 13 (S20): home does nothing on a background display; say so instead of a fake success.
+        if (key == "home" && android.os.Build.VERSION.SDK_INT < ToolPolicy.NATIVE_A11Y_MIN_SDK)
+            return ToolResult.fail("home has no effect on a background display on this Android version: use back, or launch_app")
         val code = ToolPolicy.KEYCODES[key] ?: return ToolResult.fail("key $key not supported on a background display")
-        return if (s.bg.mode == BackgroundSession.Mode.OWN && s.displayId == s.bg.displayId) ToolResult(s.bg.key(code))
+        return if (s.bg.mode == BackgroundSession.Mode.OWN && s.displayId == s.bg.displayId) pressed(s.bg.key(code))
         else ToolResult.fail("keys other than enter need the own-window method on a background display; tap the app's own back button instead")
     }
+
+    private fun done(ok: Boolean, k: String, v: String) =
+        ToolResult(ok, JSONObject().put(k, v), if (ok) null else "$v was not accepted by the system")
 
     private fun orError(o: JSONObject): ToolResult =
         if (o.has("error")) ToolResult.fail(o.getString("error")) else ToolResult.ok(o)

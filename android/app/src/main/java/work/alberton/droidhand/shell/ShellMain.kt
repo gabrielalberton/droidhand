@@ -240,7 +240,14 @@ object ShellMain {
             reparent.invoke(wct, field(user, "token"), field(stages[0], "token"), true)
             reparent.invoke(wct, field(mine, "token"), field(stages[1], "token"), true)
             wct.javaClass.getMethod("reorder", tokenCls, Boolean::class.javaPrimitiveType).invoke(wct, field(split, "token"), true)
-            Class.forName("android.window.IWindowOrganizerController").getMethod("applyTransaction", wct.javaClass).invoke(org, wct)
+            val apply = Class.forName("android.window.IWindowOrganizerController").getMethod("applyTransaction", wct.javaClass)
+            apply.invoke(org, wct)
+            // One UI sometimes pulls another task of the moved app into the bottom stage, on top of
+            // the user's task (seen on the S20 with an older copy of the same app). Put the user's back on top.
+            Thread.sleep(400)
+            val fix = Class.forName("android.window.WindowContainerTransaction").getConstructor().newInstance()
+            fix.javaClass.getMethod("reorder", tokenCls, Boolean::class.javaPrimitiveType).invoke(fix, field(user, "token"), true)
+            apply.invoke(org, fix)
             "task ${field(mine, "taskId")} + ${field(user, "taskId")} in stages ${stages.map { field(it, "taskId") }}"
         }
 

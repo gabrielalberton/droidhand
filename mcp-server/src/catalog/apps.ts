@@ -17,8 +17,8 @@ export const apps: ToolArea = {
       input: { package: z.string(), bounds: z.array(z.number()).length(4).optional(), move: z.boolean().optional(),
         split: z.boolean().optional().describe("experimental, with move=true display=0 and the shell helper: put the moved app in split screen next to the user's app") } },
     { name: "open_url", tier: "standard", confirm: false,
-      description: "Open a URL in the default app for it, on the phone screen. For a background display, launch the browser there and type the URL.",
+      description: "Open a URL in the default app for it. With display=<id> it opens on that background display, in the agent's own copy of the browser (the user's browser on the main screen is left alone).",
       input: { url: z.string().url() } },
-    { name: "go_home", tier: "standard", confirm: false, description: "Go to the home screen.", input: {} },
+    { name: "go_home", tier: "standard", confirm: false, description: "Go to the home screen (on a background display: the home key; not available on Android 13 and older).", input: {} },
   ],
 };

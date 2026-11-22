@@ -39,8 +39,8 @@ Touch, type and press keys through the accessibility service.
 | `swipe` | Swipe from one point to another. | `fromX` number<br>`fromY` number<br>`toX` number<br>`toY` number<br>`durationMs` number (optional) | standard |
 | `scroll` | Scroll the screen in a direction (a swipe across its middle; 'down' reveals what is below). | `direction` "up" \| "down" \| "left" \| "right" | standard |
 | `type_text` | Type text into the focused field (or a ref), optionally pressing enter. | `text` string<br>`ref` string (optional)<br>`submit` boolean (optional) | standard |
-| `key_event` | Press a navigation key. On an own-window background display only back, home, recents and enter are available. | `key` "back" \| "home" \| "recents" \| "notifications" \| "quick_settings" \| "enter" | standard |
-| `global_action` | Perform a global accessibility action. split_screen toggles split screen with the app on top of the main screen (e.g. after launch_app move=true display=0, so the user continues it next to their own app). | `action` "notifications" \| "quick_settings" \| "screenshot" \| "lock_screen" \| "split_screen" | standard |
+| `key_event` | Press a navigation key. On an own-window background display only back, enter and (Android 14+) home; recents is refused there because it opens on the user's main screen. | `key` "back" \| "home" \| "recents" \| "notifications" \| "quick_settings" \| "enter" | standard |
+| `global_action` | Perform a global accessibility action on the main screen (refused with display=&lt;background id&gt;). split_screen toggles split screen with the app on top of the main screen (e.g. after launch_app move=true display=0, so the user continues it next to their own app). | `action` "notifications" \| "quick_settings" \| "screenshot" \| "lock_screen" \| "split_screen" | standard |
 
 ## Apps & navigation
 
@@ -49,8 +49,8 @@ Launch apps, open links and go home.
 | Tool | What it does | Inputs | Notes |
 | --- | --- | --- | --- |
 | `launch_app` | Launch an app by package name (display=&lt;id&gt; for a background display; bounds=[l,t,r,b] px opens a One UI pop-up window on the main screen). On a background display it opens a separate copy, so the user's own copy stays on their screen. move=true reuses the app's existing task instead and moves it: with display=&lt;id&gt; it takes the user's copy to the background display (only when the user asked: it leaves their screen); with display=0 it brings the copy from the background display to the main screen ('continue on the main screen', e.g. for the user to take over). With the shell helper running (own_helper_start) the exact task from the background display is moved and bounds turn it into a pop-up window; without it Android may pick the user's own copy if the app is also open on the main screen, and bounds are ignored. The background display has the phone screen's size by default, so a moved app keeps its state instead of being recreated. What works differs per phone: see docs/devices.md. | `package` string<br>`bounds` number[4] (optional)<br>`move` boolean (optional)<br>`split` boolean (optional) | standard |
-| `open_url` | Open a URL in the default app for it, on the phone screen. For a background display, launch the browser there and type the URL. | `url` string (URL) | standard |
-| `go_home` | Go to the home screen. | — | standard |
+| `open_url` | Open a URL in the default app for it. With display=&lt;id&gt; it opens on that background display, in the agent's own copy of the browser (the user's browser on the main screen is left alone). | `url` string (URL) | standard |
+| `go_home` | Go to the home screen (on a background display: the home key; not available on Android 13 and older). | — | standard |
 
 ## Device state & settings
 
@@ -92,7 +92,7 @@ Work on a separate display while the user keeps using the phone.
 | `bg_status` | Background display state: mode, displayId, hidden, helpPending, user's method choice, own helper availability. | — | standard |
 | `bg_hide` | Hide the own-window background display (the agent keeps working; the user sees an eye bubble). | — | standard |
 | `bg_show` | Show the background window again. | — | standard |
-| `bg_close` | Close the background display (own: its apps are closed; native: they move behind the user's apps). | — | standard |
+| `bg_close` | Close the background display (own: its apps are closed; native: Android moves them to the main screen, on Samsung on top of the user's app — move or close them first). | — | standard |
 | `request_user_help` | Ask the user to take over in the background window (e.g. captcha, login). Shows the window with the message; poll bg_status until helpPending is null (the user taps the message when done). | `message` string | standard |
 | `own_helper_start` | Start the shell helper over ADB (opens an ADB session if none is open; see adb_session_begin). Enables the 'own' background-window method. The helper dies when the ADB session ends (debugging off): call adb_session_end when the background task is done. | — | privileged · local (host) |
 | `own_helper_stop` | Stop the shell helper (closes own-window background displays). | — | standard · local (host) |
@@ -114,7 +114,7 @@ Audit trail and kill switch.
 | Tool | What it does | Inputs | Notes |
 | --- | --- | --- | --- |
 | `get_audit_log` | Return the path to the append-only audit log. | — | standard · local (host) |
-| `panic_disconnect` | Immediately sever the phone session and any ADB session. Without device: every phone. | — | standard · local (host) |
+| `panic_disconnect` | Immediately sever the phone session and any ADB session (debugging is turned off, even on adb mode 'always') and stop the agent service on the phone; it stays off until someone reopens it in the DroidHand app on the phone. Without device: every phone. | — | standard · local (host) |
 
 ## Planned
 

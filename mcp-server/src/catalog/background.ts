@@ -25,7 +25,7 @@ export const background: ToolArea = {
       description: "Hide the own-window background display (the agent keeps working; the user sees an eye bubble).", input: {} },
     { name: "bg_show", tier: "standard", confirm: false, description: "Show the background window again.", input: {} },
     { name: "bg_close", tier: "standard", confirm: false,
-      description: "Close the background display (own: its apps are closed; native: they move behind the user's apps).", input: {} },
+      description: "Close the background display (own: its apps are closed; native: Android moves them to the main screen, on Samsung on top of the user's app — move or close them first).", input: {} },
     { name: "request_user_help", tier: "standard", confirm: false,
       description: "Ask the user to take over in the background window (e.g. captcha, login). Shows the window with the message; " +
         "poll bg_status until helpPending is null (the user taps the message when done).",

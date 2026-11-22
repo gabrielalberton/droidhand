@@ -22,10 +22,10 @@ export const interaction: ToolArea = {
       description: "Type text into the focused field (or a ref), optionally pressing enter.",
       input: { text: z.string(), ref: ref.optional(), submit: z.boolean().optional() } },
     { name: "key_event", tier: "standard", confirm: false,
-      description: "Press a navigation key. On an own-window background display only back, home, recents and enter are available.",
+      description: "Press a navigation key. On an own-window background display only back, enter and (Android 14+) home; recents is refused there because it opens on the user's main screen.",
       input: { key: z.enum(["back", "home", "recents", "notifications", "quick_settings", "enter"]) } },
     { name: "global_action", tier: "standard", confirm: false,
-      description: "Perform a global accessibility action. split_screen toggles split screen with the app on top of the main screen " +
+      description: "Perform a global accessibility action on the main screen (refused with display=<background id>). split_screen toggles split screen with the app on top of the main screen " +
         "(e.g. after launch_app move=true display=0, so the user continues it next to their own app).",
       input: { action: z.enum(["notifications", "quick_settings", "screenshot", "lock_screen", "split_screen"]) } },
   ],

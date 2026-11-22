@@ -58,6 +58,7 @@ class DroidHandAccessibilityService : AccessibilityService() {
             this,
             onActiveChanged = { active -> stopButton.setPinned(active) },
             ensureStopButton = { stopButton.ensureOnScreen() },
+            raiseStopButton = { stopButton.raise() },
         )
         // The relay comes up with the accessibility service (also after reboots and
         // app updates), as long as the operator has not disconnected it.
@@ -119,8 +120,19 @@ class DroidHandAccessibilityService : AccessibilityService() {
     fun capture(maxWidth: Int = 720, quality: Int = 70): JSONObject = screenshots.capture(maxWidth, quality)
 
     // ---- Interaction ----
-    fun tapAt(x: Int, y: Int, durationMs: Long = 60): Boolean = gestures.tap(x, y, durationMs)
-    fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long): Boolean = gestures.swipe(x1, y1, x2, y2, durationMs)
+    fun tapAt(x: Int, y: Int, durationMs: Long = 60): Boolean {
+        avoidStop(listOf(intArrayOf(x, y)))
+        return gestures.tap(x, y, durationMs)
+    }
+    fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long): Boolean {
+        avoidStop((0..20).map { intArrayOf(x1 + (x2 - x1) * it / 20, y1 + (y2 - y1) * it / 20) })
+        return gestures.swipe(x1, y1, x2, y2, durationMs)
+    }
+
+    /** The Stop button lives on the main screen: keep the agent's own gestures off it. */
+    private fun avoidStop(points: List<IntArray>) {
+        if (displayId == 0 && ::stopButton.isInitialized) runCatching { stopButton.avoid(points) }
+    }
     fun typeText(text: String): Boolean = reader.typeText(text)
     fun imeEnter(): Boolean = reader.imeEnter()
 

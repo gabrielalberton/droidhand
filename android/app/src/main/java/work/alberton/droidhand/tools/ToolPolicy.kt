@@ -18,6 +18,7 @@ object ToolPolicy {
     /** Tools that read or touch a display through accessibility. */
     val NEEDS_A11Y_ON_DISPLAY = setOf(
         "screen_snapshot", "tap", "long_press", "swipe", "scroll", "type_text", "list_windows", "get_foreground_app",
+        "key_event", "go_home",
     )
 
     /**
@@ -57,6 +58,9 @@ object ToolPolicy {
 
     /** A Stop tapped this long ago is still reported to the agent on its next call. */
     const val STOP_NOTICE_MS = 2 * 60_000L
+
+    const val GLOBAL_ON_BG = "global_action acts on the user's main screen, not on a background display: " +
+        "call it without display (the user is asked first), or use key_event on the background display."
 
     const val STOPPED = "stopped_by_user: the user tapped Stop on the phone and your current action was cancelled. " +
         "Stop the current task and check with the user before continuing (the connection is still up)."

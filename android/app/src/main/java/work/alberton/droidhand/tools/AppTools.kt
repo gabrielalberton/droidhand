@@ -16,10 +16,38 @@ class AppTools : ToolGroup {
         "launch_app" -> launch(ctx, args)
         "open_url" -> {
             val url = args.getString("url")
-            ctx.app.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            ToolResult.ok(JSONObject().put("opened", url))
+            val display = args.optInt("display", 0)
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (display == 0) {
+                ctx.app.startActivity(intent)
+                ToolResult.ok(JSONObject().put("opened", url))
+            } else openUrlOnBg(ctx, url, display, intent)
         }
         else -> null
+    }
+
+    /** On the background display, never on the user's screen (that one is guarded by the prompt). */
+    private fun openUrlOnBg(ctx: ToolContext, url: String, display: Int, intent: Intent): ToolResult {
+        val size = Point().also { ctx.app.getSystemService(DisplayManager::class.java).getDisplay(display)?.getRealSize(it) }
+        val opts = ActivityOptions.makeBasic().setLaunchDisplayId(display)
+        if (size.x > 0) opts.setLaunchBounds(Rect(0, 0, size.x, size.y))
+        intent.addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+        // Browsers like Chrome hand a link to their existing task, which would pull the
+        // user's own browser off the main screen. Open our own copy there first.
+        val pkg = ctx.app.packageManager.resolveActivity(intent, 0)?.activityInfo?.packageName
+            ?.takeIf { it != "android" && ctx.app.packageManager.getLaunchIntentForPackage(it) != null }
+        if (pkg != null) {
+            intent.setPackage(pkg)
+            if ((display to pkg) !in launchedOnBg) {
+                val r = launch(ctx, JSONObject().put("package", pkg).put("display", display))
+                if (!r.ok) return r
+                Thread.sleep(1200)
+            }
+        }
+        return runCatching { ctx.app.startActivity(intent, opts.toBundle()) }.fold(
+            { ToolResult.ok(JSONObject().put("opened", url).put("display", display).put("browser", pkg)) },
+            { ToolResult.fail("could not open the link on display $display (${it.javaClass.simpleName}): " +
+                "launch_app the browser there and type the URL") })
     }
 
     private fun launch(ctx: ToolContext, args: JSONObject): ToolResult {
@@ -47,6 +75,7 @@ class AppTools : ToolGroup {
                 // so the user's app keeps the focus (and the keyboard stays). Else a normal launch.
                 val viaHelper = ShellBridge.helper?.takeIf { ctx.svc?.let { s -> runCatching { s.bg.active && s.bg.displayId == display }.getOrDefault(false) } == true }
                     ?.let { h -> runCatching { h.launchApp(display, pkg, move) }.onFailure { Log.w("DroidHand", "helper launch failed", it) }.getOrNull() }
+                launchedOnBg.add(display to pkg)
                 if (viaHelper != null) return ToolResult.ok(JSONObject().put("launched", pkg).put("display", display).put("moved", move).put("via", viaHelper))
                 app.startActivity(intent, opts.toBundle())
             }
@@ -74,5 +103,10 @@ class AppTools : ToolGroup {
             }
         }
         return ToolResult.ok(JSONObject().put("launched", pkg).put("display", display).put("moved", move))
+    }
+
+    companion object {
+        /** Apps the agent opened on a background display (display ids are never reused while running). */
+        private val launchedOnBg: MutableSet<Pair<Int, String>> = java.util.Collections.synchronizedSet(mutableSetOf())
     }
 }
