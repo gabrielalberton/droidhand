@@ -110,6 +110,28 @@ The native method works out of the box (with the secure-settings grant). The **o
 
 In the app, **Background window** shows which method the agent may use and the helper status.
 
+### Several phones
+
+One relay can drive several phones, each with its own token and settings. Create `~/.config/droidhand/devices.json` (`chmod 600`; token files relative to it):
+
+```json
+{
+  "devices": [
+    { "id": "main", "name": "My phone", "tokenFile": "token", "role": "admin" },
+    { "id": "test", "name": "Test phone", "tokenFile": "devices/test.token",
+      "adb": { "mode": "always", "serial": "192.168.1.50:5555", "reverse": true } }
+  ]
+}
+```
+
+- `id`: what agents pass as `device` (lowercase letters, digits, `-`, `_`). `list_devices` shows every phone and whether it is connected; with two or more connected, a call without `device` fails rather than guess.
+- `tokenFile` / `token`: each phone needs its own (`openssl rand -hex 32 > devices/test.token`). Keeping the old `token` for your first phone means it needs no change.
+- `role`: `admin` phones can open **Relay** in the app (relay version, agent sessions, every phone and its state). Others get "only admin phones".
+- `adb.mode`: `on-demand` (default, debugging off; see above) or `always` for a test phone whose adbd is always reachable at `serial` (sessions only connect; debugging is never turned off). `adb.host` fixes the address for on-demand sessions.
+- `adb.reverse` (`always` only): the relay keeps `adb reverse tcp:8787 tcp:8787`, so a phone without Tailscale reaches it at `ws://127.0.0.1:8787`.
+
+Then `systemctl --user restart droidhand-relay` and set up the new phone with its own token: `RELAY_URL=ws://127.0.0.1:8787 DROIDHAND_TOKEN_FILE=~/.config/droidhand/devices/test.token deploy/install-phone.sh <serial>`. To pin one agent session to a phone, set `DROIDHAND_DEVICE=<id>` in its MCP config. Without `devices.json` the relay keeps the single-phone behaviour (id `phone`).
+
 ### Privacy & safety settings
 
 <!-- screenshot: <p align="center"><img src="images/screenshots/privacy.png" alt="Privacy & safety screen" width="300"></p> -->

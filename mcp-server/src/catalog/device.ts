@@ -6,6 +6,9 @@ export const device: ToolArea = {
   title: "Device state & settings",
   summary: "Device info and system settings.",
   tools: [
+    { name: "list_devices", tier: "standard", confirm: false, local: true,
+      description: "The phones this relay knows, with id, name, connected or not, model, app version and adb mode. " +
+        "When more than one phone is connected, pass device=<id> to every other tool.", input: {} },
     { name: "get_device_info", tier: "standard", confirm: false,
       description: "Model, Android version, battery, network.", input: {} },
     { name: "get_setting", tier: "standard", confirm: false,

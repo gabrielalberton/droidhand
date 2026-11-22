@@ -25,10 +25,20 @@ export const DISPLAY_PARAM = z.number().int().min(0).optional().describe(
     "errors 'awaiting_user' (retry shortly) or 'user_declined' (use bg_open instead)",
 );
 
-/** Add the `display` argument to tools forwarded to the phone (local tools have no display). */
+/** Argument every tool that acts on one phone accepts (several phones may share one relay). */
+export const DEVICE_PARAM = z.string().optional().describe(
+  "phone id (see list_devices); may be left out when only one phone is connected",
+);
+
+/** Tools that never act on one phone, so they take no `device`. */
+const HOST_TOOLS = new Set(["list_devices", "get_audit_log", "list_suggestions", "export_suggestions"]);
+
+/** Add `display` to tools forwarded to the phone (local tools have no display), and `device` to every per-phone tool. */
 function withDisplayParam(t: ToolDef): ToolDef {
-  if (t.local || "display" in t.input) return t;
-  return { ...t, input: { ...t.input, display: DISPLAY_PARAM } };
+  let input = t.input;
+  if (!t.local && !("display" in input)) input = { ...input, display: DISPLAY_PARAM };
+  if (!HOST_TOOLS.has(t.name) && !("device" in input)) input = { ...input, device: DEVICE_PARAM };
+  return input === t.input ? t : { ...t, input };
 }
 
 const RAW_AREAS: readonly ToolArea[] = [perception, interaction, apps, device, lock, adb, background, suggestions, safety];

@@ -6,7 +6,7 @@ import { asCall, parseObject, type ControlEvent, type ControlResult } from "./fr
 
 /**
  * Control channel (daemon side): the single relay daemon owns the phone
- * connection and exposes a loopback WebSocket that per-session MCP adapters
+ * connections and exposes a loopback WebSocket that per-session MCP adapters
  * connect to. This keeps the phone-facing port owned by exactly one process
  * while any number of agent sessions (Claude Code, Codex, …) drive the phone
  * through their own adapter.
@@ -24,8 +24,8 @@ export function startControlServer(core: Core, host: string, port: number, token
     const clients = new Set<WebSocket>();
 
     // Fan device events out to every authenticated adapter.
-    const unsubscribe = core.relay.onEvent((event, payload) => {
-      const msg = JSON.stringify({ type: "event", event, payload } satisfies ControlEvent);
+    const unsubscribe = core.relay.onEvent((device, event, payload) => {
+      const msg = JSON.stringify({ type: "event", device, event, payload } satisfies ControlEvent);
       for (const c of clients) if (c.readyState === WebSocket.OPEN) c.send(msg);
     });
 
@@ -45,6 +45,7 @@ export function startControlServer(core: Core, host: string, port: number, token
           clearTimeout(authTimer);
           authed = true;
           clients.add(ws);
+          core.agents = clients.size;
           return;
         }
         const call = asCall(f);
@@ -57,6 +58,7 @@ export function startControlServer(core: Core, host: string, port: number, token
       ws.on("close", () => {
         clearTimeout(authTimer);
         clients.delete(ws);
+        core.agents = clients.size;
       });
       ws.on("error", () => {});
     });

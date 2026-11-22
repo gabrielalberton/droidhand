@@ -87,7 +87,7 @@ test("device events are fanned out to authenticated adapters", async () => {
     phone.sendEvent("notification", { pkg: "com.example" });
     await waitFor(() => events.some((e) => e.event === "notification"));
     assert.deepEqual(events.find((e) => e.event === "notification"), {
-      type: "event", event: "notification", payload: { pkg: "com.example" },
+      type: "event", device: "phone", event: "notification", payload: { pkg: "com.example" },
     });
     client.close();
     ws.close();
@@ -105,7 +105,7 @@ test("ControlClient rejects pending calls when the daemon goes away", async () =
   const phone = new WebSocket(`ws://127.0.0.1:${core.relay.address()?.port}`);
   await new Promise((r) => phone.once("open", r));
   phone.send(JSON.stringify({ type: "hello", token: cfg.token, device: { suggestionLogging: false } }));
-  await waitFor(() => core.relay.connected);
+  await waitFor(() => core.relay.isConnected("phone"));
   try {
     await client.call("no_such_tool", {}); // connected and authenticated
     const pending = client.call("bg_status", {});

@@ -143,4 +143,25 @@
     <string name="float_action_cancelled">DroidHand: action cancelled</string>
     <string name="tile_on">Agent on · tap to disconnect</string>
     <string name="tile_off">Agent off</string>
+    <string name="nav_relay">Relay</string>
+    <string name="relay_row_summary">Phones connected to this relay</string>
+    <string name="relay_loading">Asking the relay…</string>
+    <string name="relay_offline">Not connected to the relay. Connect first to see its status.</string>
+    <string name="relay_unsupported">This relay does not show its status (update DroidHand on the computer).</string>
+    <string name="relay_not_admin">Only phones marked as admin on the relay can see its status.</string>
+    <string name="relay_failed">The relay did not answer: %1$s</string>
+    <string name="relay_version">DroidHand relay %1$s</string>
+    <string name="relay_started">Started %1$s</string>
+    <string name="relay_agents">Agent sessions attached: %1$d</string>
+    <string name="relay_phones">Phones</string>
+    <string name="relay_phones_online">%1$d of %2$d connected</string>
+    <string name="relay_this_phone">This phone</string>
+    <string name="relay_admin">Admin</string>
+    <string name="relay_connected_since">Connected %1$s</string>
+    <string name="relay_last_seen">Last seen %1$s</string>
+    <string name="relay_never_seen">Not seen since the relay started</string>
+    <string name="relay_adb_on_demand">on demand</string>
+    <string name="relay_adb_always">always on (test phone)</string>
+    <string name="relay_adb_open"> · session open</string>
+    <string name="relay_read_only">Read-only. Phones and their settings are configured on the computer (devices.json).</string>
 </resources>

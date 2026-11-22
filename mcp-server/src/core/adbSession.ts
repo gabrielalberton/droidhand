@@ -15,6 +15,10 @@ import { run, runFull, type AdbOutput } from "./adb.js";
  * call: every call renews it (`touch`). The phone enforces the same deadline on
  * its own (AdbSession.kt), so debugging goes off even if the relay or the
  * connection to the phone is lost.
+ *
+ * A test phone whose adbd is always reachable (adb mode "always", [fixedSerial])
+ * skips all of that: a session only connects to the serial, and ending it never
+ * turns debugging off.
  */
 
 export const ADB_TCP_PORT = 5555;
@@ -63,6 +67,8 @@ export class AdbSessions {
     private readonly dispatch: Dispatch,
     private readonly onEnd: (why: string) => void = () => {},
     private readonly t: AdbTimings = DEFAULT_TIMINGS,
+    /** adb mode "always": the phone's fixed serial; debugging is never toggled. */
+    private readonly fixedSerial = "",
   ) {}
 
   get active(): boolean {
@@ -76,6 +82,14 @@ export class AdbSessions {
   /** Open (or renew) a session; resolves once `adb -s <serial> shell` works. */
   async begin(): Promise<SessionInfo> {
     const ttl = IDLE_S;
+    if (this.fixedSerial) {
+      if (!this.active && !(await this.connect(this.fixedSerial, this.t.direct))) {
+        throw new Error(`adbd not reachable at ${this.fixedSerial} (is the phone on the network?)`);
+      }
+      this.serial = this.fixedSerial;
+      this.arm(ttl);
+      return { serial: this.serial, expiresAt: new Date(this.expiresAt).toISOString(), armed: false };
+    }
     const st = (await this.dispatch("adb_enable", { ttlSeconds: ttl })) as PhoneAdbStatus;
     if (this.active) {
       this.arm(ttl);
@@ -104,7 +118,7 @@ export class AdbSessions {
   touch(): void {
     if (!this.active) return;
     this.arm(IDLE_S);
-    if (Date.now() - this.renewedAt < RENEW_EVERY_MS) return;
+    if (this.fixedSerial || Date.now() - this.renewedAt < RENEW_EVERY_MS) return;
     this.renewedAt = Date.now();
     void this.dispatch("adb_enable", { ttlSeconds: IDLE_S }).catch(() => undefined);
   }
@@ -138,6 +152,11 @@ export class AdbSessions {
     this.serial = null;
     this.expiresAt = 0;
     this.renewedAt = 0;
+    if (this.fixedSerial) {
+      // Debugging stays on (test phone); keep the adb connection for the relay's reverse port.
+      if (serial) this.onEnd(why);
+      return;
+    }
     if (!serial && !force) return;
     if (serial) await run(this.adb, ["disconnect", serial], 5000).catch(() => undefined);
     await this.dispatch("adb_disable", { why }).catch(() => undefined);

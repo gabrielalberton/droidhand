@@ -98,14 +98,14 @@ export function renderToolsDoc(): string {
   for (const [name, desc] of shared) out.push(`- \`${name}\`: ${desc}.`.replace(/\.\.$/, "."));
   out.push(
     "",
-    "Every tool that is not local also accepts `display`; it is left out of the tables below.",
+    "Every tool that is not local also accepts `display`, and every tool that acts on one phone accepts `device`; both are left out of the tables below.",
     "",
   );
 
   for (const area of CATALOG_AREAS) {
     out.push(`## ${area.title}`, "", area.summary, "", "| Tool | What it does | Inputs | Notes |", "| --- | --- | --- | --- |");
     for (const t of area.tools) {
-      const params = describeParams(t).filter((p) => !(p.name === "display" && !t.local));
+      const params = describeParams(t).filter((p) => !(p.name === "display" && !t.local) && p.name !== "device");
       const inputs = params.length
         ? params.map((p) => `\`${p.name}\` ${cell(p.type)}${p.optional ? " (optional)" : ""}`).join("<br>")
         : "—";

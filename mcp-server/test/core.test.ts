@@ -83,7 +83,7 @@ test("a phone with the wrong token cannot drive tools", async () => {
     await new Promise((r) => setTimeout(r, 150));
     const res = await core.callTool("tap", { x: 1, y: 1 });
     assert.equal(res.ok, false);
-    assert.match(res.error ?? "", /no device connected/);
+    assert.match(res.error ?? "", /not connected/);
   });
 });
 
@@ -91,10 +91,10 @@ test("panic_disconnect severs the session", async () => {
   const cfg = tmpCfg();
   await withCore(cfg, async (core, url) => {
     const phone = await startMockPhone({ url, token: cfg.token });
-    assert.equal(core.relay.connected, true);
+    assert.equal(core.relay.isConnected("phone"), true);
     const res = await core.callTool("panic_disconnect", {});
     assert.equal(res.ok, true);
-    assert.equal(core.relay.connected, false);
+    assert.equal(core.relay.isConnected("phone"), false);
     await phone.close().catch(() => undefined);
   });
 });
@@ -106,7 +106,7 @@ test("toggling suggestion logging on the device takes effect without reconnectin
     const off = await core.callTool("suggest_feature", { title: "a", detail: "b" });
     assert.equal(off.ok, false);
     phone.sendEvent("device_info", { suggestionLogging: true });
-    await waitFor(() => core.relay.deviceInfo?.suggestionLogging === true);
+    await waitFor(() => core.relay.deviceInfo("phone")?.suggestionLogging === true);
     const on = await core.callTool("suggest_feature", { title: "a", detail: "b" });
     assert.equal(on.ok, true);
     await phone.close();

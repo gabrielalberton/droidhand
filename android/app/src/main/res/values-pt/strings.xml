@@ -136,4 +136,25 @@
     <string name="float_action_cancelled">DroidHand: ação cancelada</string>
     <string name="tile_on">Agente ligado · toque para desconectar</string>
     <string name="tile_off">Agente desligado</string>
+    <string name="nav_relay">Relay</string>
+    <string name="relay_row_summary">Celulares conectados a este relay</string>
+    <string name="relay_loading">Consultando o relay…</string>
+    <string name="relay_offline">Sem conexão com o relay. Conecte primeiro para ver o estado dele.</string>
+    <string name="relay_unsupported">Este relay não mostra o estado dele (atualize o DroidHand no computador).</string>
+    <string name="relay_not_admin">Só celulares marcados como admin no relay podem ver o estado dele.</string>
+    <string name="relay_failed">O relay não respondeu: %1$s</string>
+    <string name="relay_version">Relay DroidHand %1$s</string>
+    <string name="relay_started">Iniciado %1$s</string>
+    <string name="relay_agents">Sessões de agente conectadas: %1$d</string>
+    <string name="relay_phones">Celulares</string>
+    <string name="relay_phones_online">%1$d de %2$d conectados</string>
+    <string name="relay_this_phone">Este celular</string>
+    <string name="relay_admin">Admin</string>
+    <string name="relay_connected_since">Conectado %1$s</string>
+    <string name="relay_last_seen">Visto pela última vez %1$s</string>
+    <string name="relay_never_seen">Não visto desde que o relay iniciou</string>
+    <string name="relay_adb_on_demand">sob demanda</string>
+    <string name="relay_adb_always">sempre ligado (celular de testes)</string>
+    <string name="relay_adb_open"> · sessão aberta</string>
+    <string name="relay_read_only">Só leitura. Os celulares e as configurações deles ficam no computador (devices.json).</string>
 </resources>

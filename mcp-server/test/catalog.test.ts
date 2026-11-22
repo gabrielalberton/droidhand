@@ -11,7 +11,7 @@ const EXPECTED_TOOLS = [
   "screen_snapshot", "screen_capture", "get_foreground_app", "list_windows", "list_apps",
   "tap", "long_press", "swipe", "scroll", "type_text", "key_event", "global_action",
   "launch_app", "open_url", "go_home",
-  "get_device_info", "get_setting", "set_setting",
+  "list_devices", "get_device_info", "get_setting", "set_setting",
   "get_lock_state", "unlock_device",
   "adb_session_begin", "adb_shell", "adb_session_end",
   "bg_open", "bg_status", "bg_hide", "bg_show", "bg_close", "request_user_help", "own_helper_start", "own_helper_stop",
@@ -20,7 +20,7 @@ const EXPECTED_TOOLS = [
 ];
 
 const LOCAL_TOOLS = [
-  "adb_session_begin", "adb_shell", "adb_session_end", "own_helper_start", "own_helper_stop", "suggest_feature", "list_suggestions", "export_suggestions",
+  "list_devices", "adb_session_begin", "adb_shell", "adb_session_end", "own_helper_start", "own_helper_stop", "suggest_feature", "list_suggestions", "export_suggestions",
   "get_audit_log", "panic_disconnect",
 ];
 
@@ -103,4 +103,11 @@ test("set_setting is privileged and documents its allowlist", () => {
   assert.ok(t);
   assert.equal(t.tier, "privileged");
   assert.match(t.description, /allowlist/);
+});
+
+test("every per-phone tool takes an optional device; host-wide tools do not", () => {
+  const hostWide = new Set(["list_devices", "get_audit_log", "list_suggestions", "export_suggestions"]);
+  for (const t of CATALOG) {
+    assert.equal("device" in t.input, !hostWide.has(t.name), `${t.name} device param`);
+  }
 });

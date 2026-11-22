@@ -13,7 +13,8 @@ export const adb: ToolArea = {
         "`pm install`, `dumpsys`) and ALWAYS call adb_session_end as soon as you are done. Fallback only: the session " +
         "closes by itself 10 minutes after your last tool call (each call renews it), so a lost connection never leaves " +
         "debugging on. The phone shows a 'Turn ADB off' notification meanwhile. The first session after a reboot needs " +
-        "the phone on any Wi-Fi (error 'adb_not_armed' otherwise).",
+        "the phone on any Wi-Fi (error 'adb_not_armed' otherwise). Test phones set to adb mode \"always\" (see list_devices) " +
+        "only connect: their debugging is never turned off.",
       input: { reason: z.string().describe("why adb is needed, shown in the audit log") } },
     { name: "adb_shell", tier: "privileged", confirm: false, local: true,
       description: "Run a shell command (as the adb shell user) in the open ADB session. Returns stdout, stderr and exitCode.",

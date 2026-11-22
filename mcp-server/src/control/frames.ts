@@ -27,9 +27,11 @@ export interface ControlResult {
   error?: string;
 }
 
-/** Daemon → adapter: a device event relayed from the phone. */
+/** Daemon → adapter: a device event relayed from a phone. */
 export interface ControlEvent {
   type: "event";
+  /** Which phone sent it. */
+  device: string;
   event: string;
   payload: unknown;
 }

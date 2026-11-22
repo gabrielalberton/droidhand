@@ -66,6 +66,9 @@ fun HomeScreen(
                 prefs.relayUrl.ifBlank { stringResource(R.string.conn_not_configured) }.removePrefix("ws://").removePrefix("wss://"),
                 onClick = { onOpen(Route.CONNECTION) }) { Chevron() }
             RowDivider()
+            SettingRow(R.drawable.ic_developer, stringResource(R.string.nav_relay), stringResource(R.string.relay_row_summary),
+                onClick = { onOpen(Route.RELAY) }) { Chevron() }
+            RowDivider()
             SettingRow(R.drawable.ic_window, stringResource(R.string.nav_bg), stringResource(bgModeLabel(prefs.bgMode)),
                 onClick = { onOpen(Route.BACKGROUND) }) { Chevron() }
             RowDivider()

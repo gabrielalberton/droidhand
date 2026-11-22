@@ -18,6 +18,7 @@ export function tmpConfig(overrides: Partial<Config> = {}): Config {
     adbPath: "adb",
     adbSerial: "",
     adbHost: "",
+    devices: [],
     ...overrides,
   };
 }

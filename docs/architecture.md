@@ -42,11 +42,15 @@ One JSON text frame per message, each with a string `type` (source of truth: [`m
 | Frame | Direction | Shape |
 |---|---|---|
 | `hello` | phone → relay, first frame, within 5 s | `{type, token, device: {model, androidSdk, appVersion, suggestionLogging}}` |
-| `event` `welcome` | relay → phone | sent after a valid `hello` |
+| `event` `welcome` | relay → phone | sent after a valid `hello`; `payload.device` is the phone's id on the relay |
 | `cmd` | relay → phone | `{type, id, tool, args}` |
 | `result` | phone → relay | `{type, id, ok, data?, error?}` |
 | `event` | phone → relay | `{type, event, payload}` — e.g. `user_stop`, `device_info` |
+| `req` | phone → relay | `{type, id, op, args?}` — a question to the relay itself, e.g. `relay_status` |
+| `res` | relay → phone | `{type, id, ok, data?, error?}` — answer to a `req` (older relays ignore `req`) |
 | `ping` / `pong` | both | liveness |
+
+**Several phones.** One relay can serve several phones (see [setup](setup.md#several-phones)). Each phone has its own token, which also tells the relay which phone it is; a new session of the same phone replaces the old one. Agents pick the phone with the `device` argument (`list_devices` lists them); when more than one phone is connected and `device` is missing the call fails instead of guessing. `relay_status` (relay version, attached agent sessions, every phone and its state) is answered only for phones with `"role": "admin"`; the app shows it in **Relay**, read-only.
 
 Close codes: **4000** session replaced or severed (`panic_disconnect`), **4001** no `hello` in time, **4003** bad token. With no token configured the relay rejects everyone. The app reconnects with backoff, and comes back after reboots and app updates together with its accessibility service.
 
@@ -115,7 +119,7 @@ mcp-server/src/
   mcp/server.ts          MCP server built from the catalog
 ```
 
-State lives under `$XDG_STATE_HOME/droidhand/` (`audit/audit.jsonl`, `suggestions/suggestions.jsonl`); the token in a `0600` file (default `~/.config/droidhand/token`).
+State lives under `$XDG_STATE_HOME/droidhand/` (`audit/audit.jsonl`, `suggestions/suggestions.jsonl`; audit lines carry the `device`); the token in a `0600` file (default `~/.config/droidhand/token`), the phones in `~/.config/droidhand/devices.json` when there is more than one.
 
 ## Design history
 

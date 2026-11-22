@@ -56,7 +56,7 @@ class RawPhone {
 }
 
 async function withRelay(fn: (relay: Relay, url: string) => Promise<void>, token = "tok"): Promise<void> {
-  const relay = new Relay("127.0.0.1", 0, token, 2000);
+  const relay = new Relay("127.0.0.1", 0, new Map([[token, "p1"]]), 2000);
   await relay.start();
   try {
     await fn(relay, `ws://127.0.0.1:${relay.address()?.port}`);
@@ -73,9 +73,9 @@ test("relay: valid hello gets a welcome event and registers the device", async (
     await p.opened;
     p.send("garbage before hello is ignored");
     p.send(hello("tok"));
-    assert.deepEqual(await p.next((f) => f.type === "event"), { type: "event", event: "welcome", payload: null });
-    assert.equal(relay.connected, true);
-    assert.equal(relay.deviceInfo?.model, "Raw");
+    assert.deepEqual(await p.next((f) => f.type === "event"), { type: "event", event: "welcome", payload: { device: "p1" } });
+    assert.equal(relay.isConnected("p1"), true);
+    assert.equal(relay.deviceInfo("p1")?.model, "Raw");
     p.ws.close();
   });
 });
@@ -108,7 +108,7 @@ test("relay: cmd/result correlation, failures, ping/pong and device_info events"
     await p.next((f) => f.event === "welcome");
 
     // Success: result data resolves the dispatch.
-    const ok = relay.dispatch("tap", { x: 3 });
+    const ok = relay.dispatch("p1", "tap", { x: 3 });
     const cmd = await p.next((f) => f.type === "cmd" && f.tool === "tap");
     assert.deepEqual(cmd.args, { x: 3 });
     p.send({ type: "result", id: "unknown-id", ok: true, data: "ignored" });
@@ -116,13 +116,13 @@ test("relay: cmd/result correlation, failures, ping/pong and device_info events"
     assert.deepEqual(await ok, { done: 1 });
 
     // Failure: the phone's error string becomes the rejection message.
-    const bad = relay.dispatch("swipe", {});
+    const bad = relay.dispatch("p1", "swipe", {});
     const cmd2 = await p.next((f) => f.tool === "swipe");
     p.send({ type: "result", id: cmd2.id, ok: false, error: "awaiting_user" });
     await assert.rejects(bad, /^Error: awaiting_user$/);
 
     // Failure without an error string.
-    const bad2 = relay.dispatch("scroll", {});
+    const bad2 = relay.dispatch("p1", "scroll", {});
     const cmd3 = await p.next((f) => f.tool === "scroll");
     p.send({ type: "result", id: cmd3.id, ok: false });
     await assert.rejects(bad2, /device reported failure/);
@@ -131,11 +131,11 @@ test("relay: cmd/result correlation, failures, ping/pong and device_info events"
     await p.next((f) => f.type === "pong");
 
     const events: string[] = [];
-    const off = relay.onEvent((e) => events.push(e));
+    const off = relay.onEvent((_d, e) => events.push(e));
     p.send({ type: "event", event: "device_info", payload: { suggestionLogging: true } });
-    await p.next(() => relay.deviceInfo?.suggestionLogging === true).catch(() => undefined);
-    assert.equal(relay.deviceInfo?.suggestionLogging, true);
-    assert.equal(relay.deviceInfo?.model, "Raw", "device_info merges into the hello info");
+    await p.next(() => relay.deviceInfo("p1")?.suggestionLogging === true).catch(() => undefined);
+    assert.equal(relay.deviceInfo("p1")?.suggestionLogging, true);
+    assert.equal(relay.deviceInfo("p1")?.model, "Raw", "device_info merges into the hello info");
     assert.deepEqual(events, ["device_info"]);
     off();
     p.send({ type: "event", event: "later", payload: null });
@@ -145,7 +145,7 @@ test("relay: cmd/result correlation, failures, ping/pong and device_info events"
   });
 });
 
-test("relay: a new session replaces the old one (4000); disconnectPhone severs it", async () => {
+test("relay: a new session replaces the old one (4000); disconnect severs it", async () => {
   await withRelay(async (relay, url) => {
     const first = new RawPhone(url);
     await first.opened;
@@ -157,11 +157,11 @@ test("relay: a new session replaces the old one (4000); disconnectPhone severs i
     second.send(hello("tok"));
     assert.equal(await first.closed, CloseCode.Replaced);
     await second.next((f) => f.event === "welcome");
-    assert.equal(relay.connected, true);
+    assert.equal(relay.isConnected("p1"), true);
 
-    relay.disconnectPhone();
+    relay.disconnect("p1");
     assert.equal(await second.closed, CloseCode.Replaced);
-    assert.equal(relay.connected, false);
-    await assert.rejects(relay.dispatch("tap", {}), /no device connected/);
+    assert.equal(relay.isConnected("p1"), false);
+    await assert.rejects(relay.dispatch("p1", "tap", {}), /not connected/);
   });
 });

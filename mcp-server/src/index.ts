@@ -12,11 +12,14 @@ import { createMcpServer } from "./mcp/server.js";
  * return a clear, non-fatal error.
  */
 async function main(): Promise<void> {
-  const cfg = loadConfig();
+  const cfg = loadConfig(process.env, false);
+  // Optional: pin this agent session to one phone (DROIDHAND_DEVICE=<id>); an explicit device argument still wins.
+  const pinned = process.env.DROIDHAND_DEVICE ?? "";
   const control = new ControlClient(`ws://${cfg.controlHost}:${cfg.controlPort}`, cfg.token);
   const server = createMcpServer({
     // ADB sessions may arm adb over the network (tens of seconds); everything else answers fast.
-    call: (tool, args) => control.call(tool, args, /^(adb_|own_helper_)/.test(tool) ? 120_000 : undefined),
+    call: (tool, args) => control.call(tool, pinned && args.device === undefined ? { ...args, device: pinned } : args,
+      /^(adb_|own_helper_)/.test(tool) ? 120_000 : undefined),
     unreachableMessage: `relay daemon unreachable at ${cfg.controlHost}:${cfg.controlPort} (is droidhand-relay running?)`,
   });
   await server.connect(new StdioServerTransport());

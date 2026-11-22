@@ -9,6 +9,10 @@
  * `event` frame named `welcome`. Close code 4000 means the session was replaced
  * or severed by the operator.
  *
+ * The relay may accept several phones, each with its own token (the token tells
+ * the relay which phone it is). A phone may also ask the relay something with a
+ * `req` frame; the relay answers with a `res` frame (older relays ignore it).
+ *
  * Changing any of these shapes breaks the Android app.
  */
 
@@ -55,12 +59,56 @@ export interface EventFrame {
   payload: unknown;
 }
 
+/** Phone -> relay: a request to the relay itself (e.g. `relay_status`). */
+export interface ReqFrame {
+  type: "req";
+  id: string;
+  op: string;
+  args?: Record<string, unknown>;
+}
+
+/** Relay -> phone: answer to a `req`, correlated by `id`. */
+export interface ResFrame {
+  type: "res";
+  id: string;
+  ok: boolean;
+  data?: unknown;
+  error?: string;
+}
+
+/** One phone as listed by `list_devices` and the `relay_status` request. */
+export interface DeviceStatus {
+  id: string;
+  name: string;
+  role: "admin" | "device";
+  connected: boolean;
+  /** ISO time the current session started (null when disconnected). */
+  connectedSince: string | null;
+  /** ISO time of the last frame from this phone, this relay run (null if never). */
+  lastSeen: string | null;
+  model?: string;
+  androidSdk?: number;
+  appVersion?: string;
+  adb: { mode: "on-demand" | "always"; sessionOpen: boolean };
+}
+
+/** Answer to `relay_status` (admin phones only). */
+export interface RelayStatus {
+  version: string;
+  startedAt: string;
+  /** MCP adapters (agent sessions) connected to the control channel. */
+  agents: number;
+  /** Id of the phone that asked. */
+  self: string;
+  devices: DeviceStatus[];
+}
+
 /** Either side: liveness. */
 export interface PingFrame {
   type: "ping" | "pong";
 }
 
-export type Frame = HelloFrame | CmdFrame | ResultFrame | EventFrame | PingFrame;
+export type Frame = HelloFrame | CmdFrame | ResultFrame | EventFrame | ReqFrame | ResFrame | PingFrame;
 
 /** Close codes the relay uses on the phone socket. */
 export const CloseCode = {

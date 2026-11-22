@@ -9,7 +9,7 @@ import work.alberton.droidhand.data.Prefs
 import work.alberton.droidhand.ui.theme.Accent
 
 /** Navigation routes of the app. */
-enum class Route { HOME, CONNECTION, BACKGROUND, APPEARANCE, PRIVACY }
+enum class Route { HOME, CONNECTION, RELAY, BACKGROUND, APPEARANCE, PRIVACY }
 
 /** Live, non-persisted device state shown by the UI. */
 data class Live(

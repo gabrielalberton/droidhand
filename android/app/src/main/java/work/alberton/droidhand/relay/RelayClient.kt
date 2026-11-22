@@ -12,8 +12,13 @@ import okhttp3.WebSocketListener
 import org.json.JSONObject
 import work.alberton.droidhand.data.Prefs
 import work.alberton.droidhand.tools.ToolRouter
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import work.alberton.droidhand.BuildConfig
@@ -21,7 +26,8 @@ import work.alberton.droidhand.BuildConfig
 /**
  * Outbound-only WebSocket client to the relay. Sends a hello (with device info +
  * the suggestion-logging flag), then answers cmd frames by running the tool and
- * returning a result. Reconnects with a fixed backoff.
+ * returning a result. Can also ask the relay something (`req` → `res`, e.g. the
+ * relay status). Reconnects with a fixed backoff.
  */
 class RelayClient(context: Context) {
     private val app = context.applicationContext
@@ -36,6 +42,28 @@ class RelayClient(context: Context) {
     private var ws: WebSocket? = null
     @Volatile private var running = false
     @Volatile private var unauthorized = false
+    /** Open requests to the relay, by id. */
+    private val requests = ConcurrentHashMap<String, (JSONObject) -> Unit>()
+
+    /**
+     * Ask the relay something (e.g. "relay_status"). Returns the `res` frame
+     * (`ok`, `data` or `error`), or null when not connected or with no answer in
+     * [timeoutMs] (a relay older than this feature ignores requests).
+     */
+    suspend fun request(op: String, timeoutMs: Long = 5000): JSONObject? {
+        val socket = ws ?: return null
+        if (_state.value != State.CONNECTED) return null
+        val id = UUID.randomUUID().toString()
+        return withTimeoutOrNull(timeoutMs) {
+            suspendCancellableCoroutine { cont ->
+                requests[id] = { res -> if (cont.isActive) cont.resume(res) }
+                cont.invokeOnCancellation { requests.remove(id) }
+                if (!socket.send(JSONObject().put("type", "req").put("id", id).put("op", op).toString())) {
+                    requests.remove(id); cont.resume(null)
+                }
+            }
+        }.also { requests.remove(id) }
+    }
 
     fun start() {
         running = true
@@ -96,7 +124,11 @@ class RelayClient(context: Context) {
                 return
             }
             if (frame.optString("type") == "event" && frame.optString("event") == "welcome") {
+                _deviceId.value = frame.optJSONObject("payload")?.optString("device")?.ifBlank { null }
                 _state.value = State.CONNECTED; return
+            }
+            if (frame.optString("type") == "res") {
+                requests.remove(frame.optString("id"))?.invoke(frame); return
             }
             if (frame.optString("type") != "cmd") return
             val id = frame.optString("id")
@@ -133,6 +165,10 @@ class RelayClient(context: Context) {
     companion object {
         private val _state = MutableStateFlow(State.OFF)
         val state: StateFlow<State> = _state
+
+        /** This phone's id on the relay (sent with the welcome by relays with several phones). */
+        private val _deviceId = MutableStateFlow<String?>(null)
+        val deviceId: StateFlow<String?> = _deviceId
 
         @Volatile
         var current: RelayClient? = null
