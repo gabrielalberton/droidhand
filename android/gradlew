@@ -1,5 +1,11 @@
 #!/bin/sh
 
+# Local NUC policy, present only on the shared development host. Re-execution
+# keeps the Gradle JVM and in-process Kotlin compiler in the same scoped cgroup.
+if [ -x /usr/local/bin/nuc-heavy ] && [ "${NUC_HEAVY_ACTIVE:-}" != 1 ]; then
+    exec /usr/local/bin/nuc-heavy "$0" --no-daemon -Pkotlin.compiler.execution.strategy=in-process "$@"
+fi
+
 #
 # Copyright © 2015-2021 the original authors.
 #

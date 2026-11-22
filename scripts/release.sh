@@ -21,10 +21,15 @@ echo "==> DroidHand $TAG"
 
 # Heavy builds run under a memory cap when systemd-run is available.
 CAP=()
-command -v systemd-run >/dev/null && CAP=(systemd-run --user --scope -q -p MemoryMax=3G -p MemorySwapMax=1G --nice=10 -E "JAVA_HOME=${JAVA_HOME:-}" --)
+NPM_CAP=()
+if [[ -x /usr/local/bin/nuc-heavy ]]; then
+  NPM_CAP=(/usr/local/bin/nuc-heavy)
+elif command -v systemd-run >/dev/null; then
+  CAP=(systemd-run --user --scope -q -p MemoryMax=3G -p MemorySwapMax=1G --nice=10 -E "JAVA_HOME=${JAVA_HOME:-}" --)
+fi
 
 echo "==> MCP server: typecheck, test, build, pack"
-( cd mcp-server && npm ci --no-fund --no-audit && npm run typecheck && npm test && npm run build && npm run docs:tools -- --check )
+( cd mcp-server && "${NPM_CAP[@]}" bash -ec 'npm ci --no-fund --no-audit && npm run typecheck && npm test && npm run build && npm run docs:tools -- --check' )
 ( cd mcp-server && npm pack --silent --pack-destination "$OUT" >/dev/null )
 [[ -f "$OUT/droidhand-mcp-server-$VERSION.tgz" ]] || { echo "npm pack did not produce droidhand-mcp-server-$VERSION.tgz" >&2; exit 1; }
 
