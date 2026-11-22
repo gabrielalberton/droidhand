@@ -38,6 +38,6 @@ app usually keeps running instead of being recreated.
 
 | Feature | S24 Ultra | S20 |
 |---|---|---|
-| `unlock_device` (saved PIN) | Yes (lock screen and always-on display) | Failed on 2026-11-22: the dismiss request did not open the PIN pad, and on the second try it stayed locked. Fix in testing: swipe up when the pad is missing, check each key in the PIN field and never press OK unless the count matches |
+| `unlock_device` (saved PIN) | Yes (lock screen and always-on display) | Yes since 2026-11-22 (3/3 from screen off, ~5.5 s). Before: the dismiss request did not open the PIN pad. Now it swipes up when the pad is missing, checks each key in the PIN field and never presses OK unless the count matches |
 | Ask before acting on the main screen | Yes | Yes |
 | App frozen by the system in the background | Not seen | Yes (Samsung "Freecess"). Fix: battery optimisation off for DroidHand. The relay now closes an unresponsive phone (code 4002) so it reconnects |

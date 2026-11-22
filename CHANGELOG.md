@@ -20,7 +20,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The background display has the phone screen's size and density by default (was 720x1560/320), so apps moved between the screens keep their state instead of being recreated (tested on a Galaxy S20: Clock moved both ways with no relaunch).
 - Own window on Android 13: the Android 14 display flags are no longer set before 14 (on Samsung they marked a "hidden space" display and every launch crashed).
 - Native window on Android 13 and older: accessibility does not cover it, so screen tools answer `native_window_not_accessible` instead of failing vaguely.
-- `unlock_device`: swipes up when the PIN pad does not open, checks each key in the PIN field and never presses OK unless the count matches (a key that did not register cannot cost a wrong attempt).
+- `unlock_device`: swipes up when the PIN pad does not open, checks each key in the PIN field and never presses OK unless the count matches (a key that did not register cannot cost a wrong attempt). Tested on a Galaxy S20: 3/3 from screen off.
 
 ## [1.0.0] - 2026-11-21
 
