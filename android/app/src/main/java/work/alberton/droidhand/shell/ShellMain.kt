@@ -132,13 +132,16 @@ object ShellMain {
             displays.remove(displayId)?.release()
         }
 
-        override fun launchApp(displayId: Int, packageName: String): String = onMainLooper { launchNow(displayId, packageName) }
+        override fun launchApp(displayId: Int, packageName: String, move: Boolean): String =
+            onMainLooper { launchNow(displayId, packageName, move) }
 
-        private fun launchNow(displayId: Int, packageName: String): String {
+        /** move=false: a separate copy (the user's own task stays put); true: reuse the app's task, moved here. */
+        private fun launchNow(displayId: Int, packageName: String, move: Boolean): String {
             val ctx = systemContext()
             val intent = ctx.packageManager.getLaunchIntentForPackage(packageName)
                 ?: throw IllegalArgumentException("no launchable activity for $packageName")
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (!move) intent.addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
             val opts = ActivityOptions.makeBasic().setLaunchDisplayId(displayId)
             displays[displayId]?.display?.let { d ->
                 val size = android.graphics.Point().also { d.getRealSize(it) }

@@ -15,7 +15,8 @@ export const background: ToolArea = {
         "debugging off at bg_close — else native. Prefer it: the own window never takes the focus from the user's screen, so " +
         "their keyboard stays; on the native window any touch or new screen closes it, so use refs there). The user's choice in the app overrides mode (see forcedByUser). " +
         "Safety: work in the background only happens while the user can see it (stop button + window, eye bubble or handle). " +
-        "If those cannot be shown, the session is closed and calls fail with 'indicators_not_visible' — do not retry in a loop.",
+        "If those cannot be shown, the session is closed and calls fail with 'indicators_not_visible' — do not retry in a loop. " +
+        "width/height/dpi default to the phone screen's, so apps can move between the screens (launch_app move=true) without being recreated.",
       input: { mode: z.enum(["auto", "native", "own"]).optional(), width: z.number().optional(),
         height: z.number().optional(), dpi: z.number().optional() } },
     { name: "bg_status", tier: "standard", confirm: false,
