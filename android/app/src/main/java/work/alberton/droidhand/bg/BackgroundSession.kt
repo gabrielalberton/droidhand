@@ -90,7 +90,9 @@ class BackgroundSession(
             }
             Mode.NATIVE -> {
                 val before = dm.displays.map { it.displayId }.toSet()
-                Settings.Global.putString(ctx.contentResolver, OVERLAY_KEY, "${w}x$h/$density")
+                // own_content_only: Samsung otherwise puts its DeX launcher and taskbar on the
+                // display and opens apps as freeform windows; with it apps open full screen.
+                Settings.Global.putString(ctx.contentResolver, OVERLAY_KEY, "${w}x$h/$density,own_content_only")
                 val id = waitForNewDisplay(before)
                     ?: throw IllegalStateException("native overlay display did not appear")
                 displayId = id; mode = Mode.NATIVE; hidden = false

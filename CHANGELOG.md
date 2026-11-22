@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### App (Android)
+- Native background window opens with `own_content_only`: on Samsung One UI it no longer shows the DeX launcher and taskbar, and apps open full screen instead of as freeform windows.
+
 ## [1.0.0] - 2026-11-21
 
 First public release.
