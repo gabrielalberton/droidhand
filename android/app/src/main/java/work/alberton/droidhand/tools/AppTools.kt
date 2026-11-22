@@ -3,10 +3,12 @@ package work.alberton.droidhand.tools
 import android.app.ActivityOptions
 import android.content.Intent
 import android.graphics.Point
+import android.util.Log
 import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.net.Uri
 import org.json.JSONObject
+import work.alberton.droidhand.shell.ShellBridge
 
 /** Launching apps and opening links, on the phone screen or a background display. */
 class AppTools : ToolGroup {
@@ -34,6 +36,11 @@ class AppTools : ToolGroup {
                 val size = Point().also { app.getSystemService(DisplayManager::class.java).getDisplay(display)?.getRealSize(it) }
                 val opts = ActivityOptions.makeBasic().setLaunchDisplayId(display)
                 if (size.x > 0) opts.setLaunchBounds(Rect(0, 0, size.x, size.y))
+                // Own window: the shell helper launches without moving the display to the front,
+                // so the user's app keeps the focus (and the keyboard stays). Else a normal launch.
+                val viaHelper = ShellBridge.helper?.takeIf { ctx.svc?.let { s -> runCatching { s.bg.active && s.bg.displayId == display }.getOrDefault(false) } == true }
+                    ?.let { h -> runCatching { h.launchApp(display, pkg) }.onFailure { Log.w("DroidHand", "helper launch failed", it) }.getOrNull() }
+                if (viaHelper != null) return ToolResult.ok(JSONObject().put("launched", pkg).put("display", display).put("via", viaHelper))
                 app.startActivity(intent, opts.toBundle())
             }
             args.has("bounds") -> {

@@ -21,6 +21,10 @@ internal class ScreenReader(private val svc: DroidHandAccessibilityService) {
     @Volatile
     private var refPoints: Map<String, IntArray> = emptyMap()
 
+    /** ref -> node to click from the latest snapshot (the node or its nearest clickable ancestor). */
+    @Volatile
+    private var refNodes: Map<String, AccessibilityNodeInfo> = emptyMap()
+
     private val onMainDisplay get() = svc.displayId == Display.DEFAULT_DISPLAY
 
     private fun displayWindows(): List<AccessibilityWindowInfo> =
@@ -57,15 +61,20 @@ internal class ScreenReader(private val svc: DroidHandAccessibilityService) {
         val root = targetRoot() ?: return JSONObject().put("error", "no active window")
         val nodes = JSONArray()
         val points = HashMap<String, IntArray>()
-        walk(root, nodes, points, maxNodes)
+        val clickables = HashMap<String, AccessibilityNodeInfo>()
+        walk(root, nodes, points, maxNodes, clickables)
         refPoints = points
+        refNodes = clickables
         return JSONObject()
             .put("package", root.packageName?.toString() ?: "")
             .put("count", nodes.length())
             .put("nodes", nodes)
     }
 
-    private fun walk(node: AccessibilityNodeInfo?, out: JSONArray, points: HashMap<String, IntArray>, maxNodes: Int) {
+    private fun walk(
+        node: AccessibilityNodeInfo?, out: JSONArray, points: HashMap<String, IntArray>, maxNodes: Int,
+        clickables: HashMap<String, AccessibilityNodeInfo>,
+    ) {
         if (node == null || out.length() >= maxNodes) return
         if (!node.isVisibleToUser) return
         val text = node.text?.toString()
@@ -88,11 +97,57 @@ internal class ScreenReader(private val svc: DroidHandAccessibilityService) {
             if (node.isScrollable) o.put("scrollable", true)
             out.put(o)
             points[ref] = intArrayOf(b.centerX(), b.centerY())
+            clickableSelfOrAncestor(node)?.let { clickables[ref] = it }
         }
-        for (i in 0 until node.childCount) walk(node.getChild(i), out, points, maxNodes)
+        for (i in 0 until node.childCount) walk(node.getChild(i), out, points, maxNodes, clickables)
     }
 
     fun pointFor(ref: String): IntArray? = refPoints[ref]
+
+    /**
+     * Click [ref] through the accessibility action instead of a touch: nothing goes
+     * through the input system, so the user's screen keeps the focus. False if the
+     * element has no clickable node or the app ignores the action (then tap instead).
+     */
+    /**
+     * Scroll the biggest scrollable view on screen with an accessibility action (no touch,
+     * so a background display never takes the focus). False if nothing could scroll.
+     */
+    fun scrollAction(direction: String): Boolean = runCatching {
+        val root = targetRoot() ?: return false
+        val found = ArrayList<AccessibilityNodeInfo>()
+        fun walk(n: AccessibilityNodeInfo?, depth: Int) {
+            if (n == null || depth > 40) return
+            if (n.isScrollable && n.isVisibleToUser) found.add(n)
+            for (i in 0 until n.childCount) walk(n.getChild(i), depth + 1)
+        }
+        walk(root, 0)
+        val area = { n: AccessibilityNodeInfo -> android.graphics.Rect().also { n.getBoundsInScreen(it) }.let { it.width() * it.height() } }
+        val action = when (direction) {
+            "down" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN
+            "up" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP
+            "left" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT
+            else -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT
+        }
+        val fallback = if (direction == "down" || direction == "right") AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+        found.sortedByDescending(area).any { n ->
+            (n.actionList.any { it.id == action.id } && n.performAction(action.id)) || n.performAction(fallback)
+        }
+    }.getOrDefault(false)
+
+    fun clickRef(ref: String): Boolean = runCatching {
+        refNodes[ref]?.let { it.refresh() && it.isVisibleToUser && it.performAction(AccessibilityNodeInfo.ACTION_CLICK) } == true
+    }.getOrDefault(false)
+
+    private fun clickableSelfOrAncestor(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        var n: AccessibilityNodeInfo? = node
+        repeat(4) {
+            val cur = n ?: return null
+            if (cur.isClickable && cur.isEnabled) return cur
+            n = cur.parent
+        }
+        return null
+    }
 
     /** The focused input field; on a background display never the global focus (it may be the user's field). */
     private fun focusedInput(): AccessibilityNodeInfo? =

@@ -70,11 +70,11 @@
     <string name="bg_intro">Where the agent works while you keep using the phone.</string>
     <string name="bg_method">Method</string>
     <string name="bg_agent">Let the agent decide</string>
-    <string name="bg_agent_desc">Both methods available; the agent picks per task.</string>
+    <string name="bg_agent_desc">The agent uses its own window when it can turn debugging on (your keyboard is not affected); otherwise the native one.</string>
     <string name="bg_native">Native</string>
-    <string name="bg_native_desc">System-drawn window. Works with debugging off. Drag its handle to the X to close.</string>
+    <string name="bg_native_desc">Window drawn by the system. Works with debugging off. Note: while it is on screen, your keyboard closes whenever the agent touches it or opens a new screen in it, which makes typing hard. Drag the handle to the X to close it.</string>
     <string name="bg_own">Own window</string>
-    <string name="bg_own_desc">Hideable, resizable, opacity control, you can interact. Needs debugging on during the session.</string>
+    <string name="bg_own_desc">Does not disturb your keyboard. Can be hidden, resized, made translucent and used. Turns debugging on only while the window is open, and closes if the phone screen turns off.</string>
     <string name="bg_opacity">Window opacity</string>
     <string name="bg_opaque">Opaque</string>
     <string name="bg_helper">Own-window helper</string>

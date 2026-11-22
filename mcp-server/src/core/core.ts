@@ -37,6 +37,8 @@ export class Core {
   readonly audit: Audit;
   readonly suggestions: SuggestionStore;
   readonly adb: AdbSessions;
+  /** True while the open ADB session exists only for the own window (closed with it). */
+  private adbForWindow = false;
   private readonly cfg: Config;
 
   constructor(cfg: Config) {
@@ -45,7 +47,7 @@ export class Core {
     this.audit = new Audit(cfg.auditDir);
     this.suggestions = new SuggestionStore(cfg.suggestionsDir);
     this.adb = new AdbSessions(cfg.adbPath, cfg.adbHost, (tool, args) => this.relay.dispatch(tool, args),
-      (why) => this.audit.record({ kind: "safety", tool: "adb_session_end", why }));
+      (why) => { this.adbForWindow = false; this.audit.record({ kind: "safety", tool: "adb_session_end", why }); });
   }
 
   /** Start the phone-facing relay and audit every device event. */
@@ -89,6 +91,9 @@ export class Core {
         return this.stopHelper();
       case "panic_disconnect":
         return this.panic();
+      case "bg_open":
+        await this.prepareOwnWindow(args);
+        break;
     }
 
     // Everything else is forwarded to the phone.
@@ -103,6 +108,11 @@ export class Core {
     try {
       const data = await this.relay.dispatch(name, args);
       this.audit.record({ kind: "cmd", tool: name, ok: true });
+      if (name === "bg_close" && this.adbForWindow) {
+        // The ADB session was opened only for the own window: debugging goes off with it.
+        this.adbForWindow = false;
+        await this.adb.end("window_closed");
+      }
       return { ok: true, data };
     } catch (err) {
       const error = errorMessage(err);
@@ -121,6 +131,21 @@ export class Core {
     this.relay.disconnectPhone();
     this.audit.record({ kind: "safety", tool: "panic_disconnect", ok: true });
     return { ok: true, data: { disconnected: true } };
+  }
+
+  /**
+   * bg_open in "auto" mode prefers the own window (it never takes the focus from the
+   * user's screen, so their keyboard stays). It needs the shell helper, so when ADB can
+   * be turned on the relay opens a session just for the window and closes it at bg_close.
+   * If ADB is not possible the phone falls back to the native window.
+   */
+  private async prepareOwnWindow(args: ToolArgs): Promise<void> {
+    if ((args.mode ?? "auto") !== "auto" || !this.relay.connected) return;
+    const st = (await this.relay.dispatch("bg_status", {}).catch(() => null)) as { userChoice?: string } | null;
+    if (!st || st.userChoice !== "agent" || ownHelperAvailable(st)) return;
+    const hadSession = this.adb.active;
+    const res = await this.startHelper({});
+    if (res.ok && !hadSession) this.adbForWindow = true;
   }
 
   private async beginAdb(args: ToolArgs): Promise<ToolResult> {

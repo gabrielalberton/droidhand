@@ -12,7 +12,6 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.widget.TextView
 import kotlin.math.abs
 
 /**
@@ -73,16 +72,18 @@ class StopButton(private val service: AccessibilityService, private val onStop: 
     @SuppressLint("ClickableViewAccessibility")
     private fun show() {
         val size = dp(32f)
-        val button = TextView(service).apply {
-            text = "■"
-            setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#D32F2F"))
-                setStroke(dp(1f), Color.WHITE)
-            }
+        // Red circle with a white square drawn as layers: exactly centered (a "■" glyph sits off-center).
+        val square = dp(12f)
+        val inset = (size - square) / 2
+        val button = android.view.View(service).apply {
+            background = android.graphics.drawable.LayerDrawable(arrayOf(
+                GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(Color.parseColor("#D32F2F"))
+                    setStroke(dp(1f), Color.WHITE)
+                },
+                GradientDrawable().apply { setColor(Color.WHITE); cornerRadius = dp(2f).toFloat() },
+            )).apply { setLayerInset(1, inset, inset, inset, inset) }
             alpha = 0.45f
             contentDescription = service.getString(work.alberton.droidhand.R.string.cd_stop)
         }

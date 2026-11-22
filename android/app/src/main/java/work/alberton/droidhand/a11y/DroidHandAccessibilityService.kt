@@ -114,6 +114,8 @@ class DroidHandAccessibilityService : AccessibilityService() {
     fun foregroundPackage(): String = reader.foregroundPackage()
     fun snapshot(maxNodes: Int = 300): JSONObject = reader.snapshot(maxNodes)
     fun pointFor(ref: String): IntArray? = reader.pointFor(ref)
+    fun clickRef(ref: String): Boolean = reader.clickRef(ref)
+    fun scrollAction(direction: String): Boolean = reader.scrollAction(direction)
     fun capture(maxWidth: Int = 720, quality: Int = 70): JSONObject = screenshots.capture(maxWidth, quality)
 
     // ---- Interaction ----

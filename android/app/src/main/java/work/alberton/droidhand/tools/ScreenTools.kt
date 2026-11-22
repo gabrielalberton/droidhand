@@ -17,7 +17,17 @@ class ScreenTools : ToolGroup {
 
         // ---- Interaction ----
         "tap" -> ctx.withService { s ->
+            // A ref on a background display: click without touching (keeps the user's focus/keyboard).
+            val ref = ToolPolicy.normalizeRef(args.optString("ref", ""))
+            if (ref != null && args.optInt("display", 0) != 0 && s.clickRef(ref)) {
+                return@withService ToolResult.ok(JSONObject().put("ref", ref).put("method", "click"))
+            }
             val p = point(s, args) ?: return@withService ToolResult.fail("give a ref from screen_snapshot, or x and y")
+            // Own window: a mouse click (through the shell helper) instead of a touch, same reason.
+            val own = s.displayId != 0 && runCatching { s.bg.mode == BackgroundSession.Mode.OWN && s.bg.displayId == s.displayId }.getOrDefault(false)
+            if (own && s.bg.mouseClick(p[0], p[1])) {
+                return@withService ToolResult.ok(JSONObject().put("x", p[0]).put("y", p[1]).put("method", "mouse"))
+            }
             gesture(s.tapAt(p[0], p[1]), JSONObject().put("x", p[0]).put("y", p[1]))
         }
         "long_press" -> ctx.withService { s ->
@@ -32,6 +42,10 @@ class ScreenTools : ToolGroup {
             gesture(ok, JSONObject().put("swiped", ok))
         }
         "scroll" -> ctx.withService { s ->
+            // Background display: an accessibility scroll first (a swipe is a touch, and a touch
+            // there takes the focus from the user's screen and closes their keyboard).
+            if (s.displayId != 0 && s.scrollAction(args.getString("direction")))
+                return@withService ToolResult.ok(JSONObject().put("scrolled", true).put("method", "action"))
             val size = displaySize(ctx, s.displayId)
             val v = ToolPolicy.scrollSwipe(args.getString("direction"), size.x, size.y)
             val ok = v != null && s.swipe(v[0], v[1], v[2], v[3], 350)

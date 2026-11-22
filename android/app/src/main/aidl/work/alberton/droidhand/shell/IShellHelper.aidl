@@ -11,6 +11,10 @@ interface IShellHelper {
     boolean injectMotion(int displayId, in MotionEvent event);
     boolean injectKey(int displayId, int keyCode);
     void releaseDisplay(int displayId);
+    /** Launch [packageName] on [displayId] without moving that display to the front (keeps the user's focus). */
+    String launchApp(int displayId, String packageName);
+    /** Left mouse click: unlike a touch, it does not close the user's keyboard. */
+    boolean mouseClick(int displayId, int x, int y);
     int pid();
     void exit();
 }

@@ -11,7 +11,9 @@ export const background: ToolArea = {
         "Open a background display and return its displayId; then pass display=<id> to launch_app, screen_snapshot, " +
         "screen_capture, tap, swipe, scroll, type_text, key_event. mode: 'native' (system window, works with debugging OFF, " +
         "cannot be hidden), 'own' (our window: hideable, resizable, user can interact; needs own_helper_start, i.e. an ADB session), " +
-        "'auto' (own if the helper runs, else native). The user's choice in the app overrides mode (see forcedByUser). " +
+        "'auto' (default: the own window whenever ADB can be turned on — the relay opens an ADB session just for it and turns " +
+        "debugging off at bg_close — else native. Prefer it: the own window never takes the focus from the user's screen, so " +
+        "their keyboard stays; on the native window any touch or new screen closes it, so use refs there). The user's choice in the app overrides mode (see forcedByUser). " +
         "Safety: work in the background only happens while the user can see it (stop button + window, eye bubble or handle). " +
         "If those cannot be shown, the session is closed and calls fail with 'indicators_not_visible' — do not retry in a loop.",
       input: { mode: z.enum(["auto", "native", "own"]).optional(), width: z.number().optional(),

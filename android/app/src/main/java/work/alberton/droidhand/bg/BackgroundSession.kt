@@ -185,6 +185,10 @@ class BackgroundSession(
     fun key(code: Int): Boolean =
         mode == Mode.OWN && runCatching { ShellBridge.helper?.injectKey(displayId, code) == true }.getOrDefault(false)
 
+    /** Agent tap on the own display as a mouse click (a touch would close the user's keyboard). */
+    fun mouseClick(x: Int, y: Int): Boolean =
+        mode == Mode.OWN && runCatching { ShellBridge.helper?.mouseClick(displayId, x, y) == true }.getOrDefault(false)
+
     fun injectTouch(e: MotionEvent) {
         if (mode != Mode.OWN) return
         runCatching { ShellBridge.helper?.injectMotion(displayId, e) }

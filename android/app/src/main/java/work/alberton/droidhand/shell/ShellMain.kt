@@ -3,6 +3,8 @@ package work.alberton.droidhand.shell
 import android.annotation.SuppressLint
 import android.content.AttributionSource
 import android.content.Context
+import android.content.Intent
+import android.app.ActivityOptions
 import android.content.ContextWrapper
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
@@ -50,10 +52,12 @@ object ShellMain {
     private const val ALWAYS_UNLOCKED = 1 shl 12
     private const val TOUCH_FEEDBACK_DISABLED = 1 shl 13
     private const val OWN_FOCUS = 1 shl 14
+    /** Android 14+: launches/touches on this display never take the top focus (the user's keyboard stays). */
+    private const val STEAL_TOP_FOCUS_DISABLED = 1 shl 16
 
     const val FLAGS = PUBLIC or OWN_CONTENT_ONLY or SUPPORTS_TOUCH or ROTATES_WITH_CONTENT or
         DESTROY_CONTENT_ON_REMOVAL or TRUSTED or OWN_DISPLAY_GROUP or ALWAYS_UNLOCKED or
-        TOUCH_FEEDBACK_DISABLED or OWN_FOCUS
+        TOUCH_FEEDBACK_DISABLED or OWN_FOCUS or STEAL_TOP_FOCUS_DISABLED
 
     private val displays = ConcurrentHashMap<Int, VirtualDisplay>()
     private lateinit var dm: DisplayManager
@@ -99,6 +103,24 @@ object ShellMain {
             return inject(event, displayId)
         }
 
+        override fun mouseClick(displayId: Int, x: Int, y: Int): Boolean {
+            val props = arrayOf(MotionEvent.PointerProperties().apply { id = 0; toolType = MotionEvent.TOOL_TYPE_MOUSE })
+            val coords = arrayOf(MotionEvent.PointerCoords().apply { this.x = x.toFloat(); this.y = y.toFloat(); pressure = 1f; size = 1f })
+            val down = SystemClock.uptimeMillis()
+            fun ev(action: Int, buttons: Int, actionButton: Int = 0): MotionEvent =
+                MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, 1, props, coords, 0, buttons, 1f, 1f, 0, 0,
+                    InputDevice.SOURCE_MOUSE, 0).also { e ->
+                    if (actionButton != 0) runCatching {
+                        MotionEvent::class.java.getMethod("setActionButton", Int::class.javaPrimitiveType).invoke(e, actionButton)
+                    }
+                }
+            val primary = MotionEvent.BUTTON_PRIMARY
+            return inject(ev(MotionEvent.ACTION_DOWN, primary), displayId) &&
+                inject(ev(MotionEvent.ACTION_BUTTON_PRESS, primary, primary), displayId) &&
+                inject(ev(MotionEvent.ACTION_BUTTON_RELEASE, 0, primary), displayId) &&
+                inject(ev(MotionEvent.ACTION_UP, 0), displayId)
+        }
+
         override fun injectKey(displayId: Int, keyCode: Int): Boolean {
             val now = SystemClock.uptimeMillis()
             val down = KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0, 0, -1, 0, 0, InputDevice.SOURCE_KEYBOARD)
@@ -110,11 +132,46 @@ object ShellMain {
             displays.remove(displayId)?.release()
         }
 
+        override fun launchApp(displayId: Int, packageName: String): String = onMainLooper { launchNow(displayId, packageName) }
+
+        private fun launchNow(displayId: Int, packageName: String): String {
+            val ctx = systemContext()
+            val intent = ctx.packageManager.getLaunchIntentForPackage(packageName)
+                ?: throw IllegalArgumentException("no launchable activity for $packageName")
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+            val opts = ActivityOptions.makeBasic().setLaunchDisplayId(displayId)
+            displays[displayId]?.display?.let { d ->
+                val size = android.graphics.Point().also { d.getRealSize(it) }
+                if (size.x > 0) opts.setLaunchBounds(android.graphics.Rect(0, 0, size.x, size.y))
+            }
+            // Straight to the activity manager as com.android.shell (the system context's
+            // package, "android", does not belong to the shell uid).
+            val iam = Class.forName("android.app.ActivityManager").getMethod("getService").invoke(null)
+            val start = Class.forName("android.app.IActivityManager").getMethod(
+                "startActivityAsUserWithFeature", Class.forName("android.app.IApplicationThread"), String::class.java,
+                String::class.java, Intent::class.java, String::class.java, IBinder::class.java, String::class.java,
+                Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, Class.forName("android.app.ProfilerInfo"),
+                Bundle::class.java, Int::class.javaPrimitiveType,
+            )
+            val code = start.invoke(iam, null, SHELL_PKG, null, intent, null, null, null, 0, 0, null, opts.toBundle(), -2) as Int
+            if (code < 0) throw IllegalStateException("startActivity returned $code")
+            return "shell"
+        }
+
         override fun pid(): Int = Process.myPid()
 
         override fun exit() {
             Thread { Thread.sleep(100); shutdown() }.start()
         }
+    }
+
+    /** Run [block] on the helper's main looper (startActivity needs a Looper thread) and return its result. */
+    private fun <T> onMainLooper(block: () -> T): T {
+        val result = java.util.concurrent.atomic.AtomicReference<Result<T>>()
+        val done = java.util.concurrent.CountDownLatch(1)
+        android.os.Handler(Looper.getMainLooper()).post { result.set(runCatching(block)); done.countDown() }
+        if (!done.await(10, java.util.concurrent.TimeUnit.SECONDS)) throw IllegalStateException("helper main thread busy")
+        return result.get().getOrThrow()
     }
 
     // ---- Input injection (shell holds INJECT_EVENTS) ----

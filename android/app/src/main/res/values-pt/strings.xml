@@ -66,11 +66,11 @@
     <string name="bg_intro">Onde o agente trabalha enquanto você continua usando o celular.</string>
     <string name="bg_method">Método</string>
     <string name="bg_agent">Deixar o agente decidir</string>
-    <string name="bg_agent_desc">Os dois métodos disponíveis; o agente escolhe por tarefa.</string>
+    <string name="bg_agent_desc">O agente usa a janela própria quando pode ligar a depuração (seu teclado não é afetado); senão, a nativa.</string>
     <string name="bg_native">Nativa</string>
-    <string name="bg_native_desc">Janela desenhada pelo sistema. Funciona com a depuração desligada. Arraste a alça até o X para fechar.</string>
+    <string name="bg_native_desc">Janela desenhada pelo sistema. Funciona com a depuração desligada. Atenção: enquanto ela estiver na tela, seu teclado fecha sempre que o agente toca nela ou abre uma tela nova, o que dificulta digitar. Arraste a alça até o X para fechar.</string>
     <string name="bg_own">Janela própria</string>
-    <string name="bg_own_desc">Pode esconder, redimensionar, ajustar a opacidade e interagir. Precisa da depuração ligada durante a sessão.</string>
+    <string name="bg_own_desc">Não atrapalha seu teclado. Pode esconder, redimensionar, ajustar a opacidade e interagir. Liga a depuração só enquanto a janela está aberta e fecha se a tela do celular apagar.</string>
     <string name="bg_opacity">Opacidade da janela</string>
     <string name="bg_opaque">Opaca</string>
     <string name="bg_helper">Auxiliar da janela própria</string>
