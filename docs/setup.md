@@ -136,6 +136,14 @@ One relay can drive several phones, each with its own token and settings.
 - `adb.mode`: `on-demand` (default, debugging off; see above) or `always` for a test phone whose adbd is always reachable at `serial` (sessions only connect; debugging is never turned off). `adb.host` fixes the address for on-demand sessions.
 - `adb.reverse` (`always` only): the relay keeps `adb reverse tcp:8787 tcp:8787`, so a phone without Tailscale reaches it at `ws://127.0.0.1:8787`.
 
+**A phone on someone else's tailnet.** Share the computer with that person (admin console → the computer → *Share*), then allow shared users to reach the relay port in your tailnet policy: sharing alone does not, because shared users are not `autogroup:member`. Add to `acls`:
+
+```json
+{ "action": "accept", "src": ["autogroup:shared"], "dst": ["<computer-tailnet-ip>:8787"] }
+```
+
+Check on the computer with `sudo tailscale debug netmap`: the phone's IP must appear in `PacketFilter` sources. Sharing is one-way: the computer cannot open connections to that phone over the tailnet, so ADB (pairing and sessions) only works while the phone is on the same Wi-Fi as the computer, unless the person shares the phone back.
+
 Then `systemctl --user restart droidhand-relay` and set up the new phone with its own token: `RELAY_URL=ws://127.0.0.1:8787 DROIDHAND_TOKEN_FILE=~/.config/droidhand/devices/test.token deploy/install-phone.sh <serial>`. To pin one agent session to a phone, set `DROIDHAND_DEVICE=<id>` in its MCP config. Without `devices.json` the relay keeps the single-phone behaviour (id `phone`).
 
 ### Privacy & safety settings
