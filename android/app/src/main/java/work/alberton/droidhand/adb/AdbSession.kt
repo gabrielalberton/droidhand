@@ -152,12 +152,20 @@ object AdbSession {
         val pool = Executors.newFixedThreadPool(64)
         val open = java.util.concurrent.ConcurrentLinkedQueue<Int>()
         for (p in from..to) pool.execute {
-            runCatching { Socket().use { s -> s.connect(InetSocketAddress("127.0.0.1", p), 200); open.add(p) } }
+            runCatching { Socket().use { s -> s.connect(InetSocketAddress("127.0.0.1", p), 100); open.add(p) } }
         }
         pool.shutdown()
-        pool.awaitTermination(30, TimeUnit.SECONDS)
+        // Bounded: the relay waits 15 s for the answer; on some phones the scan is slow.
+        pool.awaitTermination(10, TimeUnit.SECONDS)
+        pool.shutdownNow()
         return JSONArray(open.sorted())
     }
+
+    /** Wireless debugging's connect port from the system property, when the app may read it. */
+    fun tlsPort(): Int? = runCatching {
+        Class.forName("android.os.SystemProperties").getMethod("get", String::class.java)
+            .invoke(null, "service.adb.tls.port") as String
+    }.getOrNull()?.toIntOrNull()?.takeIf { it in 1..65535 }
 
     private fun notify(c: Context, until: Long) {
         val off = PendingIntent.getService(

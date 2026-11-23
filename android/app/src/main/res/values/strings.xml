@@ -247,6 +247,10 @@
     <string name="pair_port">Port</string>
     <string name="pair_send">Send to the computer</string>
     <string name="pair_note">DroidHand reads only Settings windows, only while this is waiting (up to 10 min), and sends the code only to the computer it is connected to.</string>
+    <string name="pair_banner_title">DroidHand: pairing with the computer…</string>
+    <string name="pair_banner_wait">Keep this screen open until it finishes… %1$d s</string>
+    <string name="pair_banner_done">DroidHand: ADB paired ✓</string>
+    <string name="pair_banner_failed">DroidHand: pairing failed</string>
     <string name="pair_toast_sending">DroidHand: pairing code sent to the computer…</string>
     <string name="pair_toast_done">DroidHand: ADB paired with the computer</string>
     <string name="pair_toast_failed">DroidHand: pairing failed — see the app</string>

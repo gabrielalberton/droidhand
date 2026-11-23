@@ -2,11 +2,8 @@ package work.alberton.droidhand.adb
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings
 import android.view.accessibility.AccessibilityNodeInfo
-import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -59,17 +56,21 @@ object AdbPairing {
     fun onWindows(svc: AccessibilityService) {
         if (!armed) return
         val roots = runCatching { svc.windows.mapNotNull { it.root } }.getOrDefault(emptyList())
-        for (root in roots) {
-            if (root.packageName?.toString() !in SETTINGS_PKGS) continue
-            val texts = ArrayList<String>()
-            collect(root, texts, 0)
-            val code = texts.firstOrNull { CODE.matches(it.trim()) }?.trim() ?: continue
-            val addr = texts.firstNotNullOfOrNull { ADDR.find(it) } ?: continue
+            .filter { it.packageName?.toString() in SETTINGS_PKGS }
+        val texts = roots.map { r -> ArrayList<String>().also { collect(r, it, 0) } }
+        for ((i, t) in texts.withIndex()) {
+            // The pairing dialog: the 6-digit code and its IP:port.
+            val code = t.firstOrNull { CODE.matches(it.trim()) }?.trim() ?: continue
+            val addr = t.firstNotNullOfOrNull { ADDR.find(it) } ?: continue
             val port = addr.groupValues[2].toIntOrNull() ?: continue
             val key = "$code:$port"
             if (key == lastSent) return
             lastSent = key
-            send(svc.applicationContext, code, port, addr.groupValues[1])
+            // Wireless debugging's own screen behind the dialog shows the connect IP:port.
+            val connect = texts.filterIndexed { j, _ -> j != i }.flatten()
+                .flatMap { ADDR.findAll(it).toList() }.mapNotNull { it.groupValues[2].toIntOrNull() }
+                .filter { it != port }
+            send(svc.applicationContext, code, port, addr.groupValues[1], connect)
             return
         }
     }
@@ -81,10 +82,10 @@ object AdbPairing {
     }
 
     /** Send a pairing code (read from the dialog, or typed in the app) to the relay. */
-    fun send(ctx: Context, code: String, port: Int, dialogIp: String? = null) {
+    fun send(ctx: Context, code: String, port: Int, dialogIp: String? = null, connectPorts: List<Int> = emptyList()) {
         val app = ctx.applicationContext
         _state.value = State.Sending(code, port)
-        toast(app, R.string.pair_toast_sending)
+        PairBanner.sending(app)
         scope.launch {
             val result = runCatching {
                 val client = RelayClient.current ?: error(app.getString(R.string.pair_err_offline))
@@ -93,8 +94,12 @@ object AdbPairing {
                     val hosts = JSONArray()
                     listOfNotNull(a.optString("tailnet").ifBlank { null }, dialogIp, a.optString("lan").ifBlank { null })
                         .distinct().forEach { hosts.put(it) }
-                    JSONObject().put("code", code).put("port", port).put("hosts", hosts)
-                        .put("ports", AdbSession.localPorts(30000, 60999))
+                    // Wireless debugging's connect port: from its screen or the system property; the
+                    // computer also asks mDNS. Scanning every local port is the slow last resort
+                    // (tens of seconds on some phones, before the code even leaves).
+                    val known = (connectPorts + listOfNotNull(AdbSession.tlsPort())).distinct()
+                    val ports = if (known.isNotEmpty()) JSONArray(known) else AdbSession.localPorts(30000, 60999)
+                    JSONObject().put("code", code).put("port", port).put("hosts", hosts).put("ports", ports)
                 }
                 val res = client.request("adb_pair", args, 90_000) ?: error(app.getString(R.string.pair_err_offline))
                 if (!res.optBoolean("ok")) error(res.optString("error").ifBlank { "pair failed" })
@@ -109,16 +114,12 @@ object AdbPairing {
                     Settings.Global.putString(app.contentResolver, Settings.Global.ADB_ENABLED, "0")
                 }
                 _state.value = State.Done(granted, d.optBoolean("tcpip"), d.optString("note").ifBlank { null })
-                toast(app, R.string.pair_toast_done)
+                PairBanner.done(app, granted)
             }.onFailure { e ->
                 lastSent = null
                 _state.value = State.Failed(e.message ?: e.toString())
-                toast(app, R.string.pair_toast_failed)
+                PairBanner.failed(app, e.message ?: e.toString())
             }
         }
-    }
-
-    private fun toast(c: Context, res: Int) = Handler(Looper.getMainLooper()).post {
-        Toast.makeText(c, res, Toast.LENGTH_LONG).show()
     }
 }

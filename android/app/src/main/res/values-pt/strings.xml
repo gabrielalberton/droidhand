@@ -240,6 +240,10 @@
     <string name="pair_port">Porta</string>
     <string name="pair_send">Enviar ao computador</string>
     <string name="pair_note">O DroidHand só lê janelas das Configurações, só enquanto espera (até 10 min), e envia o código apenas ao computador ao qual está conectado.</string>
+    <string name="pair_banner_title">DroidHand: pareando com o computador…</string>
+    <string name="pair_banner_wait">Não saia desta tela até terminar… %1$d s</string>
+    <string name="pair_banner_done">DroidHand: ADB pareado ✓</string>
+    <string name="pair_banner_failed">DroidHand: o pareamento falhou</string>
     <string name="pair_toast_sending">DroidHand: código enviado ao computador…</string>
     <string name="pair_toast_done">DroidHand: ADB pareado com o computador</string>
     <string name="pair_toast_failed">DroidHand: o pareamento falhou — veja no app</string>

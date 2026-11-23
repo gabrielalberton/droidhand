@@ -1,5 +1,5 @@
 import { run, runFull, type AdbOutput } from "./adb.js";
-import { ADB_TCP_PORT } from "./adbSession.js";
+import { ADB_TCP_PORT, mdnsConnect } from "./adbSession.js";
 
 /**
  * ADB pairing started from the phone (app → Permissions → Secure settings → Pair
@@ -90,11 +90,13 @@ export async function pairAndSetUp(adb: string, req: PairRequest, t: PairTimings
   // IP (node sharing is one-way), and waiting for that timeout first only delays the Wi-Fi.
   const host = await pairAny(adb, req, t.pair);
 
-  // The connect port: try the listening ports the phone reported until adbd answers.
+  // The connect port: mDNS first (instant on the same Wi-Fi), then the ports the phone reported.
   let serial: string | null = null;
   const until = Date.now() + t.connect;
   while (!serial && Date.now() < until) {
-    for (const p of req.ports) {
+    const fromMdns = await mdnsConnect(adb, [host]);
+    const ports = [...new Set([...fromMdns.map((a) => Number(a.split(":")[1])), ...req.ports])];
+    for (const p of ports) {
       if (p === ADB_TCP_PORT) continue;
       const s = `${host}:${p}`;
       const c = await runFull(adb, ["connect", s], 5000).catch(() => null);

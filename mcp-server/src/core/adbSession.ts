@@ -43,6 +43,17 @@ export interface SessionInfo {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Wireless debugging's connect address(es) for [hosts], from adb's mDNS discovery (same network only). */
+export async function mdnsConnect(adb: string, hosts: string[]): Promise<string[]> {
+  const out = await run(adb, ["mdns", "services"], 4000).catch(() => "");
+  const found: string[] = [];
+  for (const line of out.split("\n")) {
+    const m = /_adb-tls-connect\._tcp\.?\s+(\d{1,3}(?:\.\d{1,3}){3}):(\d+)/.exec(line);
+    if (m && hosts.includes(m[1]!)) found.push(`${m[1]}:${m[2]}`);
+  }
+  return [...new Set(found)];
+}
+
 /** Waits, in ms (overridable for tests). */
 export interface AdbTimings {
   /** How long to retry the TCP port before arming it. */
@@ -96,14 +107,19 @@ export class AdbSessions {
       return { serial: this.serial!, expiresAt: new Date(this.expiresAt).toISOString(), armed: false };
     }
     try {
-      const host = this.hostOverride || st.addresses?.tailnet || st.addresses?.lan;
-      if (!host) throw new Error("the phone reported no tailnet or Wi-Fi address (set DROIDHAND_ADB_HOST)");
-      const serial = `${host}:${ADB_TCP_PORT}`;
+      // Tailnet and Wi-Fi at once: a phone on someone else's tailnet (node shared with it)
+      // never answers on its tailnet IP, since sharing is one-way.
+      const hosts = this.hostOverride ? [this.hostOverride]
+        : [...new Set([st.addresses?.tailnet, st.addresses?.lan].filter((h): h is string => !!h))];
+      if (!hosts.length) throw new Error("the phone reported no tailnet or Wi-Fi address (set DROIDHAND_ADB_HOST)");
+      const serials = hosts.map((h) => `${h}:${ADB_TCP_PORT}`);
       let armed = false;
-      if (!(await this.connect(serial, this.t.direct))) {
-        await this.armTcpPort(host, ttl);
+      let serial = await this.connectAny(serials, this.t.direct);
+      if (!serial) {
+        await this.armTcpPort(hosts, ttl);
         armed = true;
-        if (!(await this.connect(serial, this.t.afterArm))) throw new Error(`adbd did not come up on ${serial} after arming`);
+        serial = await this.connectAny(serials, this.t.afterArm);
+        if (!serial) throw new Error(`adbd did not come up on ${serials.join(" or ")} after arming`);
       }
       this.serial = serial;
       this.arm(ttl);
@@ -188,8 +204,25 @@ export class AdbSessions {
     return false;
   }
 
+  /** The first of [serials] that connects (all tried at once), or null. Late winners are disconnected. */
+  private connectAny(serials: string[], totalMs: number): Promise<string | null> {
+    if (serials.length === 1) return this.connect(serials[0]!, totalMs).then((ok) => (ok ? serials[0]! : null));
+    return new Promise((resolve, reject) => {
+      let left = serials.length;
+      let winner: string | null = null;
+      let error: unknown = null;
+      for (const s of serials) {
+        this.connect(s, totalMs).then((ok) => {
+          if (ok && !winner) { winner = s; resolve(s); } else if (ok) void run(this.adb, ["disconnect", s], 3000).catch(() => undefined);
+        }, (e: unknown) => { error ??= e; }).finally(() => {
+          if (--left === 0 && !winner) (error ? reject(error) : resolve(null));
+        });
+      }
+    });
+  }
+
   /** First session after a reboot: open adbd's TCP port through wireless debugging. */
-  private async armTcpPort(host: string, ttl: number): Promise<void> {
+  private async armTcpPort(hosts: string[], ttl: number): Promise<void> {
     try {
       await this.dispatch("adb_enable", { ttlSeconds: ttl, wifi: true });
     } catch (err) {
@@ -200,10 +233,14 @@ export class AdbSessions {
       let tls: string | null = null;
       for (let attempt = 0; attempt < 3 && !tls; attempt++) {
         await sleep(this.t.retry * 2);
-        const { ports } = (await this.dispatch("adb_local_ports", {})) as { ports: number[] };
-        for (const p of ports ?? []) {
-          if (p === ADB_TCP_PORT) continue;
-          if (await this.connect(`${host}:${p}`, this.t.retry)) { tls = `${host}:${p}`; break; }
+        // Wireless debugging's port: mDNS on the same Wi-Fi is instant; else ask the phone.
+        let candidates = await mdnsConnect(this.adb, hosts);
+        if (!candidates.length) {
+          const { ports } = (await this.dispatch("adb_local_ports", {}).catch(() => ({ ports: [] }))) as { ports: number[] };
+          candidates = hosts.flatMap((h) => (ports ?? []).filter((p) => p !== ADB_TCP_PORT).map((p) => `${h}:${p}`));
+        }
+        for (const c of candidates) {
+          if (await this.connect(c, this.t.retry)) { tls = c; break; }
         }
       }
       if (!tls) throw new Error("could not reach wireless debugging; pair this computer once (Developer options → Wireless debugging → Pair device, then `adb pair <ip:port>`)");

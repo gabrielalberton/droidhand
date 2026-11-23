@@ -25,8 +25,8 @@ android {
         minSdk = 30
         targetSdk = 35
         // Single source of truth for the app version (keep in sync with mcp-server/package.json).
-        versionName = "1.2.2"
-        versionCode = 10202 // major * 10000 + minor * 100 + patch
+        versionName = "1.2.3"
+        versionCode = 10203 // major * 10000 + minor * 100 + patch
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

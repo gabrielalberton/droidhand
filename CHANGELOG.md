@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-11-23
+
+### App (Android)
+- Pair from the app: a card at the top of the screen, above Settings, shows "pairing with the computer…" with a timer from the moment the code leaves until the result, then the result. Leaving the pairing screen too early is what made the first try fail.
+- The pairing code leaves at once: wireless debugging's connect port comes from its own screen (behind the pairing dialog) or the system property. Before, the app scanned 30 000 local ports first, which took up to 30 s on a Galaxy S24 FE. The scan is now only the last resort and bounded to 10 s.
+
+### Relay
+- ADB sessions try the phone's tailnet and Wi-Fi addresses at once, so a phone on someone else's tailnet (unreachable on its tailnet IP) works on the same Wi-Fi. Before, the session failed after waiting on the tailnet IP.
+- Wireless debugging's connect port is looked up with adb's mDNS first (pairing and the first session after a reboot); asking the phone is the fallback.
+
 ## [1.2.2] - 2026-11-23
 
 Found testing a second phone (Galaxy S24 FE, not rooted, on another tailnet).

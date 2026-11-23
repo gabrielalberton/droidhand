@@ -123,3 +123,40 @@ test("ADB session: stopping the relay without a session leaves the user's debugg
   await s.end("agent", true);
   assert.deepEqual(phone.tools(), ["adb_disable"]);
 });
+
+test("ADB session: a phone whose tailnet IP never answers (shared from another tailnet) is reached over Wi-Fi; mDNS gives the port", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "fake-adb-shared-"));
+  const adb = join(dir, "adb");
+  writeFileSync(adb, `#!/bin/sh
+D="${dir}"
+echo "$*" >> "$D/log"
+if [ "$1" = "-s" ]; then shift 2; fi
+case "$1" in
+  mdns) printf 'List of discovered mdns services\\nadb-X-a\\t_adb-tls-connect._tcp\\t192.168.1.9:40001\\n' ;;
+  connect)
+    case "$2" in
+      100.64.0.9:*) sleep 1; echo "failed to connect to '$2': Operation timed out"; exit 1 ;;
+      192.168.1.9:5555) if [ -f "$D/armed" ]; then echo "connected to $2"; else echo "failed to connect to '$2'"; exit 1; fi ;;
+      192.168.1.9:40001) echo "connected to $2" ;;
+      *) echo "failed to connect to '$2'"; exit 1 ;;
+    esac ;;
+  disconnect) echo "disconnected $2" ;;
+  tcpip) touch "$D/armed"; echo "restarting in TCP mode port: $2" ;;
+  shell) echo dh-ok ;;
+esac
+`);
+  chmodSync(adb, 0o755);
+  const tools: string[] = [];
+  const dispatch = async (tool: string) => {
+    tools.push(tool);
+    if (tool === "adb_local_ports") throw new Error("timeout");
+    return { onWifi: true, addresses: { tailnet: "100.64.0.9", lan: "192.168.1.9" } };
+  };
+  const s = new AdbSessions(adb, "", dispatch, () => {}, { direct: 300, afterArm: 2000, retry: 10 });
+  const info = await s.begin();
+  assert.equal(info.serial, "192.168.1.9:5555");
+  assert.equal(info.armed, true);
+  assert.ok(!tools.includes("adb_local_ports"), "mDNS found the port, no scan on the phone");
+  assert.ok(readFileSync(join(dir, "log"), "utf8").includes("-s 192.168.1.9:40001 tcpip 5555"));
+  await s.end();
+});
