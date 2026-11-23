@@ -39,6 +39,7 @@ import work.alberton.droidhand.ui.settings.BackgroundScreen
 import work.alberton.droidhand.ui.settings.ConnectionScreen
 import work.alberton.droidhand.ui.settings.PrivacyScreen
 import work.alberton.droidhand.ui.settings.AddPhoneScreen
+import work.alberton.droidhand.ui.settings.PairAdbScreen
 import work.alberton.droidhand.ui.settings.RelayScreen
 import work.alberton.droidhand.ui.theme.DroidHandTheme
 import work.alberton.droidhand.ui.theme.isAppDark
@@ -51,9 +52,22 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val prefs = Prefs(this)
         if (prefs.serviceEnabled && prefs.relayUrl.isNotBlank()) RelayService.start(this)
+        pendingInvite.value = inviteOf(intent)
         setContent { App(prefs) }
     }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        inviteOf(intent)?.let { pendingInvite.value = it }
+    }
+
+    /** droidhand://connect#relay=…&token=… (the relay's setup page): asks before using it. */
+    private fun inviteOf(i: android.content.Intent?): Invite.Data? =
+        i?.data?.takeIf { it.scheme == "droidhand" && it.host == "connect" }?.toString()?.let(Invite::parse)
 }
+
+/** An invite opened from a link, waiting for the user to confirm it. */
+private val pendingInvite = mutableStateOf<Invite.Data?>(null)
 
 private fun readLive(ctx: Context): Live {
     val bg = bgSession()
@@ -88,6 +102,31 @@ private fun App(prefs: Prefs) {
             if (Build.VERSION.SDK_INT >= 29) window.isNavigationBarContrastEnforced = false
         }
 
+        pendingInvite.value?.let { inv ->
+            // A link can come from any web page: show where it points and let the user decide.
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { pendingInvite.value = null },
+                title = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(work.alberton.droidhand.R.string.link_title)) },
+                text = {
+                    androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(
+                        if (prefs.relayUrl.isBlank()) work.alberton.droidhand.R.string.link_body
+                        else work.alberton.droidhand.R.string.link_body_replace, inv.relay, inv.name ?: "—"))
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(onClick = {
+                        prefs.relayUrl = inv.relay; prefs.token = inv.token
+                        if (prefs.serviceEnabled) RelayService.restart(ctx)
+                        pendingInvite.value = null
+                        route = Route.CONNECTION
+                    }) { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(work.alberton.droidhand.R.string.link_use)) }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { pendingInvite.value = null }) {
+                        androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(android.R.string.cancel))
+                    }
+                },
+            )
+        }
         BackHandler(enabled = route != Route.HOME) { route = if (route == Route.ADD_PHONE) Route.RELAY else Route.HOME }
         AnimatedContent(
             targetState = route,
@@ -104,6 +143,7 @@ private fun App(prefs: Prefs) {
                 Route.CONNECTION -> ConnectionScreen(prefs, relay, back)
                 Route.RELAY -> RelayScreen(relay, back, onAddPhone = { route = Route.ADD_PHONE })
                 Route.ADD_PHONE -> AddPhoneScreen(prefs, relay, onBack = { route = Route.RELAY })
+                Route.PAIR_ADB -> PairAdbScreen(relay, live, back)
                 Route.BACKGROUND -> BackgroundScreen(prefs, live, back)
                 Route.APPEARANCE -> AppearanceScreen(ui, back)
                 Route.PRIVACY -> PrivacyScreen(prefs, back)

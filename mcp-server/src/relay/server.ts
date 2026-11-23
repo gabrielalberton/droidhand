@@ -1,5 +1,6 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import { randomUUID } from "node:crypto";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { CloseCode, encodeFrame, parseFrame, type DeviceInfo, type Frame } from "../protocol.js";
 
 /** Grace period for the first (hello) frame before the socket is closed. */
@@ -24,6 +25,9 @@ export type EventHandler = (device: string, event: string, payload: unknown) => 
 /** Answers a phone's `req` frame (e.g. `relay_status`); a throw becomes an error answer. */
 export type RequestHandler = (device: string, op: string, args: Record<string, unknown>) => Promise<unknown>;
 
+/** Answers a plain HTTP request on the relay port (the setup page); false = 404. */
+export type HttpHandler = (req: IncomingMessage, res: ServerResponse) => boolean;
+
 /** One authenticated phone session. */
 export interface PhoneSession {
   readonly device: string;
@@ -46,6 +50,9 @@ interface Session {
  */
 export class Relay {
   private wss: WebSocketServer | null = null;
+  private http: Server | null = null;
+  private httpHandler: HttpHandler | null = null;
+  private readonly connectHandlers = new Set<(device: string) => void>();
   private readonly sessions = new Map<string, Session>();
   private readonly lastSeenAt = new Map<string, Date>();
   /** Commands in a row that timed out, per phone. */
@@ -67,11 +74,18 @@ export class Relay {
 
   start(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const wss = new WebSocketServer({ host: this.host, port: this.port });
-      wss.on("listening", () => resolve());
-      wss.on("error", reject);
+      // One port for both: phones' WebSocket and the plain-HTTP setup page.
+      const http = createServer((req, res) => {
+        let handled = false;
+        try { handled = req.method === "GET" && this.httpHandler !== null && this.httpHandler(req, res); } catch { handled = false; }
+        if (!handled && !res.headersSent) { res.writeHead(404, { "content-type": "text/plain" }); res.end("not found\n"); }
+      });
+      const wss = new WebSocketServer({ server: http });
       wss.on("connection", (ws) => this.onConnection(ws));
+      http.on("error", reject);
+      http.listen(this.port, this.host, () => resolve());
       this.wss = wss;
+      this.http = http;
     });
   }
 
@@ -80,7 +94,10 @@ export class Relay {
     for (const s of this.sessions.values()) s.ws.close();
     this.sessions.clear();
     await new Promise<void>((res) => (this.wss ? this.wss.close(() => res()) : res()));
+    this.http?.closeAllConnections?.();
+    await new Promise<void>((res) => (this.http ? this.http.close(() => res()) : res()));
     this.wss = null;
+    this.http = null;
   }
 
   /** Accept a new phone's token from now on (a phone added while the relay runs). */
@@ -119,6 +136,16 @@ export class Relay {
     return () => this.eventHandlers.delete(handler);
   }
 
+  /** Set who answers plain HTTP requests on the relay port (only one). */
+  onHttp(handler: HttpHandler): void {
+    this.httpHandler = handler;
+  }
+
+  /** Called each time a phone authenticates. */
+  onConnected(handler: (device: string) => void): void {
+    this.connectHandlers.add(handler);
+  }
+
   /** Set who answers phone requests (only one). */
   onRequest(handler: RequestHandler): void {
     this.requestHandler = handler;
@@ -126,7 +153,7 @@ export class Relay {
 
   /** The actual bound port (useful when port 0 was requested in tests). */
   address(): { host: string; port: number } | null {
-    const a = this.wss?.address();
+    const a = this.http?.address();
     if (a && typeof a === "object") return { host: this.host, port: a.port };
     return null;
   }
@@ -203,6 +230,7 @@ export class Relay {
         this.lastSeenAt.set(id, new Date());
         // Lets the app show "connected" only once the token was accepted.
         ws.send(encodeFrame({ type: "event", event: "welcome", payload: { device: id } }));
+        for (const h of this.connectHandlers) { try { h(id); } catch { /* ignore */ } }
         return;
       }
 

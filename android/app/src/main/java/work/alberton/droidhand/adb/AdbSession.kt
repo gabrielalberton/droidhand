@@ -125,7 +125,7 @@ object AdbSession {
     }
 
     /** IPv4 addresses by kind: "tailnet" (100.64.0.0/10) and "lan" (Wi-Fi). */
-    private fun addresses(): JSONObject {
+    internal fun addresses(): JSONObject {
         val out = JSONObject()
         runCatching {
             for (nif in NetworkInterface.getNetworkInterfaces()) {

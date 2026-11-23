@@ -9,6 +9,10 @@ import { Audit, redact } from "./audit.js";
 import { SuggestionStore, isSuggestionCategory } from "./suggestions.js";
 import { run, startShellHelper, stopShellHelper } from "./adb.js";
 import { AdbSessions } from "./adbSession.js";
+import { pairAndSetUp, validatePair, type PairResult } from "./adbPair.js";
+import { SetupLinks } from "./setupLinks.js";
+import { appLink, pickLang, renderGonePage, renderSetupPage } from "../relay/setupPage.js";
+import type { IncomingMessage, ServerResponse } from "node:http";
 
 /** Outcome of one tool call, as returned to the MCP adapter over the control channel. */
 export interface ToolResult {
@@ -55,12 +59,15 @@ export class Core {
   readonly relay: Relay;
   readonly audit: Audit;
   readonly suggestions: SuggestionStore;
+  readonly setup = new SetupLinks();
   readonly startedAt = new Date();
   /** MCP adapters (agent sessions) currently connected to the control channel. */
   agents = 0;
   private readonly cfg: Config;
   private readonly phones = new Map<string, Phone>();
   private reverseTimer: NodeJS.Timeout | undefined;
+  /** Phones with an ADB pairing in progress (one at a time each). */
+  private readonly pairing = new Set<string>();
 
   constructor(cfg: Config) {
     this.cfg = cfg;
@@ -97,6 +104,8 @@ export class Core {
     await this.relay.start();
     this.relay.onEvent((device, event, payload) => this.audit.record({ kind: "event", device, event, payload: redact(payload) }));
     this.relay.onRequest((device, op, args) => this.onPhoneRequest(device, op, args));
+    this.relay.onConnected((device) => this.setup.spend(device));
+    this.relay.onHttp((req, res) => this.serveSetup(req, res));
     if ([...this.phones.values()].some((p) => p.cfg.adb.reverse)) {
       void this.keepReverse();
       this.reverseTimer = setInterval(() => void this.keepReverse(), REVERSE_EVERY_MS);
@@ -227,6 +236,7 @@ export class Core {
   /** A phone asked the relay something (`req` frame). */
   private async onPhoneRequest(device: string, op: string, args: Record<string, unknown> = {}): Promise<unknown> {
     if (op === "add_device") return this.addDeviceFromPhone(device, args);
+    if (op === "adb_pair") return this.pairFromPhone(device, args);
     if (op !== "relay_status") throw new Error(`unsupported request '${op}'`);
     const phone = this.phones.get(device);
     if (phone?.cfg.role !== "admin") throw new Error("not_admin: only admin phones can see the relay status");
@@ -260,6 +270,72 @@ export class Core {
       this.audit.record({ kind: "safety", device, tool: "add_device", ok: false, error: errorMessage(err) });
       throw err;
     }
+  }
+
+  /**
+   * The phone pairs this computer's adb with itself (code read from Android's pairing
+   * dialog), then gets the one-time grants. Any phone may pair itself; the code never
+   * reaches the audit log.
+   */
+  private async pairFromPhone(device: string, args: Record<string, unknown>): Promise<PairResult> {
+    if (this.phones.get(device)?.cfg.adb.mode === "always") throw new Error("not_needed: this phone's adb is always on (adb mode \"always\")");
+    if (this.pairing.has(device)) throw new Error("busy: a pairing is already running for this phone");
+    this.pairing.add(device);
+    try {
+      const req = validatePair(args);
+      const r = await pairAndSetUp(this.cfg.adbPath, req);
+      this.audit.record({ kind: "safety", device, tool: "adb_pair", ok: true, args: { host: r.host, connected: r.connected, granted: r.granted, tcpip: r.tcpip } });
+      return r;
+    } catch (err) {
+      this.audit.record({ kind: "safety", device, tool: "adb_pair", ok: false, error: errorMessage(err) });
+      throw err;
+    } finally {
+      this.pairing.delete(device);
+    }
+  }
+
+  /**
+   * A one-time setup link for a phone (control channel only, never an agent tool):
+   * `existing` = a configured phone (e.g. the first one), else a new phone `id`/`name`
+   * is added like add_device. [relayUrl] is the address the phone will dial.
+   */
+  createInvite(args: Record<string, unknown>): { device: string; name: string; relayUrl: string; token: string; setupPath: string; appLink: string; expiresAt: string } {
+    const relayUrl = String(args.relayUrl ?? "");
+    if (!/^wss?:\/\/[^\s"'<>&#]+$/.test(relayUrl)) throw new Error("bad_relay_url: pass the address phones dial, e.g. ws://100.x.y.z:8787");
+    let cfg: DeviceConfig;
+    if (args.id !== undefined && args.id !== "") {
+      const file = this.cfg.devicesFile;
+      if (!file || !this.cfg.devices?.length) throw new Error("no_devices_file: create devices.json first (see docs/setup.md, Several phones), or invite the existing phone");
+      const added = writeNewDevice(file, validateNewDevice(args, this.phones.keys()));
+      this.addPhone(added);
+      this.relay.addToken(added.token, added.id);
+      cfg = added;
+    } else {
+      const want = args.existing ? String(args.existing) : this.phones.size === 1 ? [...this.phones.keys()][0]! : "";
+      const p = this.phones.get(want);
+      if (!p) throw new Error(`which_phone: pass --existing <id> or --id <new-id> (configured: ${[...this.phones.keys()].join(", ")})`);
+      cfg = p.cfg;
+    }
+    const { code, expiresAt } = this.setup.create({ device: cfg.id, name: cfg.name, token: cfg.token, relayUrl });
+    this.audit.record({ kind: "safety", device: cfg.id, tool: "setup_link", ok: true, args: { expiresAt } });
+    return { device: cfg.id, name: cfg.name, relayUrl, token: cfg.token, setupPath: `/setup/${code}`, appLink: appLink({ relayUrl, token: cfg.token, name: cfg.name }), expiresAt };
+  }
+
+  /** GET /setup/<code> (page) and /setup/<code>.json (what the app reads after scanning the QR). */
+  private serveSetup(req: IncomingMessage, res: ServerResponse): boolean {
+    const m = /^\/setup\/([A-Za-z0-9_-]+)(\.json)?$/.exec((req.url ?? "").split("?")[0] ?? "");
+    if (!m) return false;
+    const e = this.setup.get(m[1]!);
+    const lang = pickLang(req.headers["accept-language"]);
+    const head = { "cache-control": "no-store", "referrer-policy": "no-referrer", "x-content-type-options": "nosniff" };
+    if (m[2]) {
+      res.writeHead(e ? 200 : 410, { ...head, "content-type": "application/json" });
+      res.end(JSON.stringify(e ? { relay: e.relayUrl, token: e.token, name: e.name } : { error: "gone" }));
+    } else {
+      res.writeHead(e ? 200 : 410, { ...head, "content-type": "text/html; charset=utf-8" });
+      res.end(e ? renderSetupPage(e, lang) : renderGonePage(lang));
+    }
+    return true;
   }
 
   /** panic_disconnect without a device: every phone. */

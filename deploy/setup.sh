@@ -29,7 +29,7 @@ else
 fi
 
 # 2) Build if needed.
-if [[ ! -f "${REPO}/mcp-server/dist/daemon.js" ]]; then
+if [[ ! -f "${REPO}/mcp-server/dist/daemon.js" || ! -f "${REPO}/mcp-server/dist/invite.js" ]]; then
   echo "building mcp-server..."
   ( cd "${REPO}/mcp-server" && npm ci --no-fund --no-audit && npm run build )
 fi
@@ -52,8 +52,26 @@ systemctl --user enable --now droidhand-relay.service
 sleep 1
 systemctl --user --no-pager --full status droidhand-relay.service | sed -n '1,8p' || true
 
+# 4) Reach the relay from the tailnet (phones dial ws://<tailnet-ip>:8787).
+PORT="${DROIDHAND_RELAY_PORT:-8787}"
+if command -v tailscale >/dev/null 2>&1; then
+  if tailscale serve status 2>/dev/null | grep -q "tcp://127.0.0.1:${PORT}"; then
+    echo "tailscale already forwards port ${PORT} to the relay"
+  elif tailscale serve --bg --tcp="${PORT}" "tcp://127.0.0.1:${PORT}" >/dev/null 2>&1; then
+    echo "tailscale now forwards port ${PORT} (tailnet only) to the relay"
+  else
+    echo "note: could not run 'tailscale serve' (needs operator rights). Run once:"
+    echo "  sudo tailscale serve --bg --tcp=${PORT} tcp://127.0.0.1:${PORT}"
+  fi
+fi
+
 echo
 echo "DroidHand relay installed."
 echo "  control (adapters): 127.0.0.1:8788"
-echo "  phone relay:        127.0.0.1:8787  (expose over Tailscale when the app is ready:"
-echo "                      tailscale serve --tcp=8787 tcp://127.0.0.1:8787 )"
+echo "  phone relay:        127.0.0.1:${PORT} (tailnet: ws://<this computer's tailnet IP>:${PORT})"
+echo
+
+# 5) Setup link + QR code for the phone (one-time). Another phone later: npm run invite -- --id <id> --name <name>
+if [[ "${NO_INVITE:-0}" != "1" ]]; then
+  "${NODE}" "${REPO}/mcp-server/dist/invite.js" || echo "(run it again later: cd mcp-server && npm run invite)"
+fi

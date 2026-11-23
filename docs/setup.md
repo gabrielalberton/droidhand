@@ -5,7 +5,7 @@ About 10 minutes. You need:
 - a **computer** that stays on (Linux or macOS; a home server is ideal) with **Node.js 20+** and **git**;
 - an **Android 11+** phone;
 - a **private network** between them — [Tailscale](https://tailscale.com) is easiest and works away from home; a home LAN also works;
-- optional: **adb** ([platform-tools](https://developer.android.com/tools/releases/platform-tools)) for the one-time secure-settings grant and the own-window background method.
+- optional: **adb** ([platform-tools](https://developer.android.com/tools/releases/platform-tools)) on the computer, for ADB on demand, the secure-settings grant and the own-window background method. The phone never needs a cable: pairing is done from the app.
 
 ```
   computer                                         phone
@@ -27,14 +27,18 @@ deploy/setup.sh
 
 1. creates a random token in `~/.config/droidhand/token` (`0600`, never printed);
 2. builds the server (`mcp-server/dist/`);
-3. installs and starts the `droidhand-relay` **user** systemd service.
+3. installs and starts the `droidhand-relay` **user** systemd service;
+4. with Tailscale, serves port 8787 on your tailnet IP only (`tailscale serve --bg --tcp=8787 tcp://127.0.0.1:8787`; it prints the command if it lacks the rights);
+5. prints a **one-time setup link and its QR code** for the phone.
 
-The relay listens on `127.0.0.1:8787` (phone) and `127.0.0.1:8788` (agents). Let the phone reach port 8787 over your private network:
-
-```bash
-# Tailscale (recommended): serve the port on your tailnet IP only
-tailscale serve --tcp=8787 tcp://127.0.0.1:8787
 ```
+  ▄▄▄▄▄▄▄ ▄ ▄▄ ▄▄▄▄▄▄▄
+  █ ▄▄▄ █ ...  █ ▄▄▄ █        http://100.x.y.z:8787/setup/<one-time code>
+```
+
+On the phone (with Tailscale on the same tailnet), point the camera at the QR code or open the link: the page has the download link, an **Open in DroidHand** button that fills in the connection (the app asks before using it), and the next steps. The link works once: it stops working when that phone connects, when the relay restarts, or after 24 h. Make another any time with `cd mcp-server && npm run invite` (add `-- --id tablet --name "Tablet"` for a new phone; see [Several phones](#several-phones)). In the app, **Connection → Scan QR code** also reads it.
+
+The relay listens on `127.0.0.1:8787` (phone, plus the setup page) and `127.0.0.1:8788` (agents).
 
 On a LAN without Tailscale, set `DROIDHAND_RELAY_HOST` to the computer's LAN address in the service instead (`systemctl --user edit droidhand-relay`). Never expose the port to the internet.
 
@@ -49,17 +53,13 @@ Check it: `systemctl --user status droidhand-relay`.
 
 <!-- screenshot: <p align="center"><img src="images/screenshots/home.png" alt="DroidHand home screen: status card and permissions panel" width="300"></p> -->
 
-3. **Connection** → enter the relay address, `ws://<computer-tailnet-ip>:8787`, and paste the token (`cat ~/.config/droidhand/token` on the computer). It saves automatically and reconnects when you leave the screen.
+3. **Connection**: filled in by the setup page's button or by **Scan QR code**. By hand: the relay address, `ws://<computer-tailnet-ip>:8787`, and the token (`cat ~/.config/droidhand/token` on the computer). It saves automatically and reconnects when you leave the screen.
 4. **Permissions** panel → tap each row:
    - **Accessibility** → *Installed apps* → *DroidHand* → on. This is what lets the agent read and use the screen.
      On Android 13+ a sideloaded app's accessibility switch may be greyed out as a *restricted setting*: open *App info → ⋮ → Allow restricted settings*, then try again.
    - **Notifications** → allow (the always-on status with a Disconnect button).
    - **Unrestricted battery** → allow, so the connection survives the screen being off.
-   - **Secure settings** (optional) → from the computer, once:
-
-     ```bash
-     adb shell pm grant work.alberton.droidhand android.permission.WRITE_SECURE_SETTINGS
-     ```
+   - **Secure settings** (optional) → **Pair from the app** (see [ADB on demand](#adb-on-demand)): the computer grants it right after pairing. Or, with a cable, once: `adb shell pm grant work.alberton.droidhand android.permission.WRITE_SECURE_SETTINGS`.
 
      Needed for the native background window and for ADB on demand (the app turns debugging on and off).
 
@@ -97,7 +97,9 @@ Try it: *"What's on my phone's screen?"* — the agent calls `screen_snapshot`. 
 Some tasks need adb (granting a permission, installing an APK, `dumpsys`). DroidHand keeps debugging **off** and lets the agent turn it on for a session (`adb_session_begin` … `adb_session_end`). One-time setup:
 
 1. Install adb on the computer.
-2. On the phone: *Developer options → Wireless debugging → Pair device with pairing code*, then on the computer `adb pair <ip:port>` and type the code. Turn wireless debugging off again.
+2. On the phone, in DroidHand: **Permissions → Secure settings → Pair from the app** → **Start**. In *Wireless debugging*, turn it on and tap *Pair device with pairing code*, and leave the code on screen. The accessibility service reads the code and port (only Settings windows, only while waiting) and sends them to the relay, which runs `adb pair`, connects, grants the secure-settings permission, runs `adb tcpip 5555` and hands back; the app then turns debugging off. The phone must be on Wi-Fi, and the computer must reach it (same Wi-Fi or same tailnet).
+
+   Without the app: *Developer options → Wireless debugging → Pair device with pairing code*, then `adb pair <ip:port>` on the computer and type the code.
 
 That is all: the first session after each reboot arms the connection by itself (the phone must be on a Wi-Fi network for that one session); later sessions work on mobile data over the tailnet. While a session is open the phone shows **ADB is on for the agent** with a *Turn ADB off* button.
 

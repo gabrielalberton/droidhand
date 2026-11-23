@@ -57,6 +57,22 @@ object Invite {
         return Data(relay, token)
     }
 
+    /** The relay's one-time setup link (`http://<relay>/setup/<code>`), as printed by droidhand-invite. */
+    private val SETUP = Regex("""^https?://[^\s/]+/setup/[A-Za-z0-9_-]{16,64}$""")
+    fun isSetupUrl(text: String) = SETUP.matches(text.trim())
+
+    /** Read the connection behind a setup link (blocking: call off the main thread). */
+    fun fetchSetup(url: String): Data? = runCatching {
+        val req = okhttp3.Request.Builder().url(url.trim() + ".json").build()
+        okhttp3.OkHttpClient.Builder().callTimeout(15, java.util.concurrent.TimeUnit.SECONDS).build()
+            .newCall(req).execute().use { r ->
+                if (!r.isSuccessful) return@runCatching null
+                val j = org.json.JSONObject(r.body!!.string())
+                val relay = j.optString("relay"); val token = j.optString("token")
+                if (RELAY.matches(relay) && TOKEN.matches(token)) Data(relay, token, j.optString("name").ifBlank { null }) else null
+            }
+    }.getOrNull()
+
     fun fromClipboard(ctx: Context): Data? =
         ctx.getSystemService(ClipboardManager::class.java)?.primaryClip
             ?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(ctx)?.toString()?.let(::parse)
@@ -82,7 +98,17 @@ object Invite {
         val opts = GmsBarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
         GmsBarcodeScanning.getClient(ctx, opts).startScan()
             .addOnSuccessListener { code ->
-                val inv = code.rawValue?.let(::parse)
+                val raw = code.rawValue.orEmpty()
+                if (isSetupUrl(raw)) {
+                    // Setup link from the computer's terminal: ask the relay for the connection.
+                    val main = android.os.Handler(android.os.Looper.getMainLooper())
+                    Thread {
+                        val inv = fetchSetup(raw)
+                        main.post { onResult(inv, if (inv == null) R.string.invite_setup_gone else null) }
+                    }.start()
+                    return@addOnSuccessListener
+                }
+                val inv = parse(raw)
                 onResult(inv, if (inv == null) R.string.invite_scan_not_invite else null)
             }
             .addOnCanceledListener { onResult(null, null) }

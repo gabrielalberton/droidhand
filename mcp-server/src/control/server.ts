@@ -50,7 +50,10 @@ export function startControlServer(core: Core, host: string, port: number, token
         }
         const call = asCall(f);
         if (!call) return;
-        const res = await core.callTool(call.tool, call.args);
+        // relay_invite: setup link for the terminal (droidhand-invite); not an agent tool.
+        const res = call.tool === "relay_invite"
+          ? (() => { try { return { ok: true, data: core.createInvite(call.args) }; } catch (err) { return { ok: false, error: err instanceof Error ? err.message : String(err) }; } })()
+          : await core.callTool(call.tool, call.args);
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: "result", id: call.id, ...res } satisfies ControlResult));
         }

@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-23
+
+### Setup without the computer at hand
+- **Setup link + QR code in the terminal**: `deploy/setup.sh` ends by printing a one-time link (`http://<tailnet-ip>:8787/setup/<code>`) and its QR code; `npm run invite` (`droidhand-invite`) makes more, also for a new phone (`--id`, `--name`, `--admin`). The page, served by the relay on its own port, has the download link, an **Open in DroidHand** button (`droidhand://connect#…`, confirmed in the app before use) and the steps. The link works once: it is spent when that phone connects, on relay restart, or after 24 h. **Connection → Scan QR code** also reads it.
+- `setup.sh` serves the relay port on the tailnet with `tailscale serve` when it can.
+- **Pair ADB from the app** (Permissions → Secure settings → Pair from the app): the accessibility service reads the code and port from Android's pairing dialog and sends them to the relay (`adb_pair`), which pairs, grants the secure-settings permission and arms ADB on demand; the app turns debugging off afterwards. Typing the code by hand also works.
+
 ## [1.1.0] - 2026-11-22
 
 ### Relay + MCP server

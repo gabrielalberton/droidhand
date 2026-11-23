@@ -59,7 +59,7 @@ fun HomeScreen(
             if (p.granted == p.total) stringResource(R.string.permissions_all_ok)
             else stringResource(R.string.permissions_count, p.granted, p.total),
         )
-        PermissionsCard(p, refresh)
+        PermissionsCard(p, refresh, onPair = { onOpen(Route.PAIR_ADB) })
 
         SectionLabel(stringResource(R.string.section_settings))
         Card {

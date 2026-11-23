@@ -46,11 +46,13 @@ One JSON text frame per message, each with a string `type` (source of truth: [`m
 | `cmd` | relay → phone | `{type, id, tool, args}` |
 | `result` | phone → relay | `{type, id, ok, data?, error?}` |
 | `event` | phone → relay | `{type, event, payload}` — e.g. `user_stop`, `device_info` |
-| `req` | phone → relay | `{type, id, op, args?}` — a question to the relay itself: `relay_status`, or `add_device` `{id, name, role}` (admin phones; answers the new token once) |
+| `req` | phone → relay | `{type, id, op, args?}` — a question to the relay itself: `relay_status`, `add_device` `{id, name, role}` (admin phones; answers the new token once), or `adb_pair` `{code, port, hosts, ports}` (the phone pairs the relay's adb with itself; the relay pairs, grants secure settings and arms `adb tcpip 5555`) |
 | `res` | relay → phone | `{type, id, ok, data?, error?}` — answer to a `req` (older relays ignore `req`) |
 | `ping` / `pong` | both | liveness |
 
 **Several phones.** One relay can serve several phones (see [setup](setup.md#several-phones)). Each phone has its own token, which also tells the relay which phone it is; a new session of the same phone replaces the old one. Agents pick the phone with the `device` argument (`list_devices` lists them); when more than one phone is connected and `device` is missing the call fails instead of guessing. `relay_status` (relay version, attached agent sessions, every phone and its state) is answered only for phones with `"role": "admin"`; the app shows it in **Relay**, read-only. Admin phones can also add a phone (`add_device`): the relay writes its token and `devices.json` entry and accepts it without a restart.
+
+**Setup page.** The relay's port also answers plain HTTP `GET /setup/<code>` (and `/setup/<code>.json`): a one-time page made by `droidhand-invite` (control channel `relay_invite`, not an agent tool) with the download link and a `droidhand://connect#relay=…&token=…` button. Codes are 128-bit, in memory only, `no-store`, spent when that phone connects, on restart or after 24 h; everything else is 404.
 
 Close codes: **4000** session replaced or severed (`panic_disconnect`), **4001** no `hello` in time, **4002** unresponsive (two commands in a row timed out; the app reconnects with a fresh worker), **4003** bad token. With no token configured the relay rejects everyone. The app reconnects with backoff, and comes back after reboots and app updates together with its accessibility service.
 

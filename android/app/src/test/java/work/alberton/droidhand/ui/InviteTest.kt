@@ -24,4 +24,15 @@ class InviteTest {
         assertEquals(true, link.startsWith(Invite.DOWNLOAD_URL + "#"))
         assertEquals(Invite.Data("ws://100.81.104.50:8787", tok, "Tablet da Ana"), Invite.parse(link))
     }
+
+    @Test fun readsTheSetupPageAppLink() {
+        val link = "droidhand://connect#relay=ws://100.81.104.50:8787&token=$tok&name=Tablet%20da%20Ana"
+        assertEquals(Invite.Data("ws://100.81.104.50:8787", tok, "Tablet da Ana"), Invite.parse(link))
+    }
+
+    @Test fun recognisesSetupLinks() {
+        assertEquals(true, Invite.isSetupUrl("http://100.81.104.50:8787/setup/AbCdEfGhIjKlMnOpQrStUv"))
+        assertEquals(false, Invite.isSetupUrl("http://100.81.104.50:8787/setup/short"))
+        assertEquals(false, Invite.isSetupUrl("https://github.com/x/releases/latest"))
+    }
 }

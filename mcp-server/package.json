@@ -1,6 +1,6 @@
 {
   "name": "droidhand-mcp-server",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "description": "DroidHand MCP server + relay — lets AI agents control an Android phone over MCP.",
@@ -16,7 +16,8 @@
   },
   "bin": {
     "droidhand-mcp": "dist/index.js",
-    "droidhand-relay": "dist/daemon.js"
+    "droidhand-relay": "dist/daemon.js",
+    "droidhand-invite": "dist/invite.js"
   },
   "files": [
     "dist",
@@ -27,6 +28,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.test.json",
     "relay": "node dist/daemon.js",
+    "invite": "node dist/invite.js",
     "mcp": "node dist/index.js",
     "mock-phone": "node --import tsx src/dev/mock-phone-cli.ts",
     "docs:tools": "node --import tsx scripts/gen-tools-doc.ts",
@@ -34,11 +36,13 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
+    "qrcode": "^1.5.4",
     "ws": "^8.18.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^22.7.0",
+    "@types/qrcode": "^1.5.5",
     "@types/ws": "^8.5.12",
     "tsx": "^4.19.2",
     "typescript": "^5.6.2"

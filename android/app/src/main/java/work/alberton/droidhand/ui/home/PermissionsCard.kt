@@ -48,7 +48,7 @@ import work.alberton.droidhand.ui.theme.LocalStatusColors
 
 @SuppressLint("BatteryLife")
 @Composable
-internal fun PermissionsCard(p: PermissionState, refresh: () -> Unit) {
+internal fun PermissionsCard(p: PermissionState, refresh: () -> Unit, onPair: () -> Unit) {
     val ctx = LocalContext.current
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         if (!ok) ctx.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName))
@@ -79,7 +79,7 @@ internal fun PermissionsCard(p: PermissionState, refresh: () -> Unit) {
             })
         RowDivider()
         PermRow(R.drawable.ic_key, R.string.perm_secure, R.string.perm_secure_desc, p.secureSettings, required = false,
-            action = null, onAction = {}) {
+            action = R.string.action_pair, onAction = onPair) {
             Text(
                 stringResource(R.string.perm_secure_how),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,

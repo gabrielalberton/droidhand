@@ -218,7 +218,7 @@ private fun slug(name: String): String =
 
 /** One numbered step: text, an optional command (tap to copy) and an optional note. */
 @Composable
-private fun Step(n: Int?, text: String, code: String? = null, note: String? = null) {
+internal fun Step(n: Int?, text: String, code: String? = null, note: String? = null) {
     val cs = MaterialTheme.colorScheme
     val ctx = LocalContext.current
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.Top) {

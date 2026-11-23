@@ -109,7 +109,19 @@ class DroidHandAccessibilityService : AccessibilityService() {
         super.onDestroy()
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+    private val pairCheck = Runnable { work.alberton.droidhand.adb.AdbPairing.onWindows(this) }
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        // ADB pairing from the app: read the pairing dialog (only while armed, only Settings).
+        if (event != null && work.alberton.droidhand.adb.AdbPairing.armed &&
+            (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
+                event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED)) {
+            val h = pairHandler
+            h.removeCallbacks(pairCheck)
+            h.postDelayed(pairCheck, 300)
+        }
+    }
+    private val pairHandler by lazy { Handler(Looper.getMainLooper()) }
     override fun onInterrupt() {}
 
     private fun toast(res: Int) = Handler(Looper.getMainLooper()).post {

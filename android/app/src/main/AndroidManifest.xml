@@ -39,10 +39,18 @@
         <activity
             android:name=".ui.MainActivity"
             android:configChanges="uiMode|locale|layoutDirection"
+            android:launchMode="singleTop"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- The relay's setup page: droidhand://connect#relay=…&token=… (confirmed in the app) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="droidhand" android:host="connect" />
             </intent-filter>
         </activity>
 
