@@ -43,7 +43,7 @@ import work.alberton.droidhand.ui.components.SectionLabel
 
 /** Permissions → Secure settings → Pair from the app: adb pairing without the computer at hand. */
 @Composable
-fun PairAdbScreen(relay: RelayClient.State, live: Live, onBack: () -> Unit) {
+fun PairAdbScreen(relay: RelayClient.State, live: Live, onBack: () -> Unit, onConnection: () -> Unit) {
     val ctx = LocalContext.current
     val state by AdbPairing.state.collectAsState()
     var devOn by remember { mutableStateOf(devOptions(ctx)) }
@@ -58,8 +58,15 @@ fun PairAdbScreen(relay: RelayClient.State, live: Live, onBack: () -> Unit) {
             modifier = Modifier.padding(horizontal = 4.dp),
         )
         Spacer(Modifier.height(12.dp))
-        if (!connected) Note(stringResource(R.string.pair_need_relay))
-        if (!live.perms.accessibility) Note(stringResource(R.string.pair_need_a11y))
+        // Say what is missing and offer the way there, instead of a silently grey button.
+        if (!connected) {
+            Note(stringResource(R.string.pair_need_relay))
+            TextButton(onClick = onConnection) { Text(stringResource(R.string.pair_open_connection)) }
+        }
+        if (!live.perms.accessibility) {
+            Note(stringResource(R.string.pair_need_a11y))
+            TextButton(onClick = { open(ctx, Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) { Text(stringResource(R.string.action_enable)) }
+        }
 
         SectionLabel(stringResource(R.string.pair_steps))
         Card {
@@ -74,8 +81,15 @@ fun PairAdbScreen(relay: RelayClient.State, live: Live, onBack: () -> Unit) {
             Step(3, stringResource(R.string.pair_s3))
             Row(Modifier.fillMaxWidth().padding(start = 56.dp, end = 16.dp, bottom = 14.dp)) {
                 Button(
-                    enabled = ready && devOn && state !is AdbPairing.State.Sending,
+                    enabled = state !is AdbPairing.State.Sending,
                     onClick = {
+                        val why = when {
+                            !connected -> R.string.pair_need_relay
+                            !live.perms.accessibility -> R.string.pair_need_a11y
+                            !devOn -> R.string.pair_s1
+                            else -> null
+                        }
+                        if (why != null) { android.widget.Toast.makeText(ctx, why, android.widget.Toast.LENGTH_LONG).show(); return@Button }
                         AdbPairing.arm()
                         open(ctx, Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
                             .putExtra(":settings:fragment_args_key", "toggle_adb_wireless"))
@@ -109,7 +123,7 @@ fun PairAdbScreen(relay: RelayClient.State, live: Live, onBack: () -> Unit) {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                 }
                 OutlinedButton(
-                    enabled = connected && code.length == 6 && port.isNotEmpty() && state !is AdbPairing.State.Sending,
+                    enabled = ready && code.length == 6 && port.isNotEmpty() && state !is AdbPairing.State.Sending,
                     onClick = { AdbPairing.send(ctx, code, port.toInt()) },
                 ) { Text(stringResource(R.string.pair_send)) }
             }

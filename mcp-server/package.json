@@ -1,6 +1,6 @@
 {
   "name": "droidhand-mcp-server",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "type": "module",
   "description": "DroidHand MCP server + relay — lets AI agents control an Android phone over MCP.",

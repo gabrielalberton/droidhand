@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-11-23
+
+### App (Android)
+- Pair ADB from the app: the Start button is no longer silently grey; it says what is missing (connection to the computer, accessibility, developer options) and offers the way there.
+- Home: after 15 s of "Connecting…" the card says the phone is probably not reaching the computer (Tailscale off, another tailnet).
+
 ## [1.2.0] - 2026-11-23
 
 ### Setup without the computer at hand

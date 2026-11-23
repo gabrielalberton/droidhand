@@ -225,7 +225,7 @@
     <string name="action_pair">Pair from the app</string>
     <string name="pair_title">Pair ADB from the app</string>
     <string name="pair_intro">Lets the computer reach this phone over adb without plugging it in or typing anything there. Done once per computer: the computer also grants the secure-settings permission and prepares ADB on demand, then debugging goes off again.</string>
-    <string name="pair_need_relay">Connect the app to the computer first (Connection).</string>
+    <string name="pair_need_relay">This phone is not connected to the computer yet, and pairing goes through it. Fill in Connection (setup link or QR code). A phone on someone else\'s tailnet needs the computer shared with that tailnet first.</string>
     <string name="pair_need_a11y">Turn on DroidHand\'s accessibility service first: it reads the pairing code for you.</string>
     <string name="pair_steps">Steps</string>
     <string name="pair_s1">Turn on developer options: Settings → About phone → Software information → tap Build number 7 times.</string>
@@ -256,4 +256,6 @@
     <string name="link_body_replace">A link wants DroidHand to connect to %1$s (%2$s) instead of the current computer. Only accept if it came from your own computer: whoever runs it can control this phone.</string>
     <string name="link_use">Connect</string>
     <string name="invite_setup_gone">This setup link is no longer valid, or the computer cannot be reached (is Tailscale on?).</string>
+    <string name="pair_open_connection">Open Connection</string>
+    <string name="status_connecting_slow">Not reaching the computer. Is Tailscale on, on the same tailnet as the computer (or the computer shared with yours)?</string>
 </resources>

@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -63,10 +64,17 @@ internal fun StatusCard(prefs: Prefs, live: Live, relay: State, onOpen: (Route) 
             State.OFF -> R.string.status_off
         },
     )
+    // Still connecting after a while: most often the phone cannot reach the computer at all.
+    var slow by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(state) {
+        slow = false
+        if (state == State.CONNECTING) { kotlinx.coroutines.delay(15_000); slow = true }
+    }
     val detail = when {
         state == State.NOT_CONFIGURED -> stringResource(R.string.status_not_configured_detail)
         !live.perms.accessibility -> stringResource(R.string.status_needs_a11y)
         state == State.CONNECTED -> stringResource(R.string.status_connected_detail, host)
+        state == State.CONNECTING && slow -> stringResource(R.string.status_connecting_detail, host) + "\n" + stringResource(R.string.status_connecting_slow)
         state == State.CONNECTING -> stringResource(R.string.status_connecting_detail, host)
         state == State.UNAUTHORIZED -> stringResource(R.string.status_unauthorized_detail)
         else -> stringResource(R.string.status_off_detail)

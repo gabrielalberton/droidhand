@@ -143,7 +143,7 @@ private fun App(prefs: Prefs) {
                 Route.CONNECTION -> ConnectionScreen(prefs, relay, back)
                 Route.RELAY -> RelayScreen(relay, back, onAddPhone = { route = Route.ADD_PHONE })
                 Route.ADD_PHONE -> AddPhoneScreen(prefs, relay, onBack = { route = Route.RELAY })
-                Route.PAIR_ADB -> PairAdbScreen(relay, live, back)
+                Route.PAIR_ADB -> PairAdbScreen(relay, live, back, onConnection = { route = Route.CONNECTION })
                 Route.BACKGROUND -> BackgroundScreen(prefs, live, back)
                 Route.APPEARANCE -> AppearanceScreen(ui, back)
                 Route.PRIVACY -> PrivacyScreen(prefs, back)

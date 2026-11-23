@@ -218,7 +218,7 @@
     <string name="action_pair">Parear pelo app</string>
     <string name="pair_title">Parear ADB pelo app</string>
     <string name="pair_intro">Permite que o computador acesse este celular por adb sem cabo e sem digitar nada nele. Feito uma vez por computador: ele também concede as configurações seguras e prepara o ADB sob demanda, e a depuração volta a ficar desligada.</string>
-    <string name="pair_need_relay">Conecte o app ao computador antes (Conexão).</string>
+    <string name="pair_need_relay">Este celular ainda não está conectado ao computador, e o pareamento passa por ele. Preencha a Conexão (link de configuração ou QR code). Um celular em outra tailnet precisa que o computador seja compartilhado com ela antes.</string>
     <string name="pair_need_a11y">Ative a acessibilidade do DroidHand antes: é ela que lê o código de pareamento.</string>
     <string name="pair_steps">Passos</string>
     <string name="pair_s1">Ative as opções do desenvolvedor: Configurações → Sobre o telefone → Informações do software → toque 7 vezes em Número de compilação.</string>
@@ -249,4 +249,6 @@
     <string name="link_body_replace">Um link quer conectar o DroidHand a %1$s (%2$s) no lugar do computador atual. Só aceite se veio do seu próprio computador: quem o controla pode comandar este celular.</string>
     <string name="link_use">Conectar</string>
     <string name="invite_setup_gone">Este link de configuração não vale mais, ou o computador está fora de alcance (o Tailscale está ligado?).</string>
+    <string name="pair_open_connection">Abrir Conexão</string>
+    <string name="status_connecting_slow">Não está alcançando o computador. O Tailscale está ligado, na mesma tailnet do computador (ou com o computador compartilhado com a sua)?</string>
 </resources>
