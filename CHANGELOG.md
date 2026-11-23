@@ -17,6 +17,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Tool descriptions: `open_url`, `key_event`, `go_home`, `global_action` and `panic_disconnect` say what they do on a background display and that a panic also stops the app until someone reopens it on the phone.
 
 ### App (Android)
+- **Relay → Add another phone**: step-by-step instructions to connect one more phone (token, devices.json, relay restart, app setup, one-time grant, the install-phone.sh shortcut), with this phone's relay address filled in and tap-to-copy commands.
 - New **Relay** screen (read-only): relay version, agent sessions and every phone with its connection state, model, app version and ADB mode. Only phones marked admin on the relay can see it.
 - Native background window opens with `own_content_only`: on Samsung One UI it no longer shows the DeX launcher and taskbar, and apps open full screen instead of as freeform windows.
 - When the relay closes the session as unresponsive (4002), the app reconnects with a fresh tool worker, so a stuck tool no longer blocks the next commands.

@@ -112,7 +112,7 @@ In the app, **Background window** shows which method the agent may use and the h
 
 ### Several phones
 
-One relay can drive several phones, each with its own token and settings. Create `~/.config/droidhand/devices.json` (`chmod 600`; token files relative to it):
+One relay can drive several phones, each with its own token and settings. The app shows these steps too: **Relay → Add another phone**. Create `~/.config/droidhand/devices.json` (`chmod 600`; token files relative to it):
 
 ```json
 {

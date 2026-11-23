@@ -164,4 +164,26 @@
     <string name="relay_adb_always">always on (test phone)</string>
     <string name="relay_adb_open"> · session open</string>
     <string name="relay_read_only">Read-only. Phones and their settings are configured on the computer (devices.json).</string>
+    <string name="add_phone_row">Add another phone</string>
+    <string name="add_phone_row_sub">See the instructions</string>
+    <string name="add_phone_title">Add a phone</string>
+    <string name="add_phone_intro">Each phone has its own token. You set it up on the computer that runs the relay, then on the new phone. About 10 minutes. Tap a command to copy it.</string>
+    <string name="add_phone_on_computer">On the computer</string>
+    <string name="add_phone_on_phone">On the new phone</string>
+    <string name="add_phone_s1">Create a token for the new phone. Replace &lt;id&gt; with a short name (lowercase letters, digits, - or _), e.g. tablet.</string>
+    <string name="add_phone_s2">Add the phone to ~/.config/droidhand/devices.json, inside \"devices\" (put a comma after the previous entry):</string>
+    <string name="add_phone_s2_note">\"role\": \"admin\" lets the phone open this Relay screen. For a test phone whose ADB is always on, add \"adb\": { \"mode\": \"always\", \"serial\": \"&lt;ip&gt;:5555\" }.</string>
+    <string name="add_phone_s3">Restart the relay so it reads the new phone:</string>
+    <string name="add_phone_s4">Install Tailscale and sign in to the same tailnet as the computer.</string>
+    <string name="add_phone_s5">Install DroidHand from the latest release (the .apk file) and open it.</string>
+    <string name="add_phone_s6">Under Connection, enter the same relay address this phone uses: %1$s, and paste the new phone\'s token. The computer prints it with:</string>
+    <string name="add_phone_s7">In the Permissions panel, turn on Accessibility (if it is greyed out: App info → ⋮ → Allow restricted settings), Notifications and Unrestricted battery. On Samsung also: Battery → Background usage limits → Never sleeping apps → DroidHand.</string>
+    <string name="add_phone_s8">Once, from the computer: turn on Wireless debugging on the new phone, pair it (Pair device with pairing code, then adb pair &lt;ip:port&gt; on the computer), connect and run:</string>
+    <string name="add_phone_s8_note">Then turn debugging off again: from now on the agent turns ADB on and off by itself when a task needs it.</string>
+    <string name="add_phone_shortcut">Shortcut</string>
+    <string name="add_phone_shortcut_text">With the new phone already connected over adb, this does steps 5, 6, the accessibility switch and step 8 in one go (run it in the droidhand folder; Tailscale and battery are still up to you):</string>
+    <string name="add_phone_check">Check</string>
+    <string name="add_phone_check_text">The new phone shows up as connected in the Relay list. Agents pick a phone with device=\"&lt;id&gt;\" (list_devices shows them all).</string>
+    <string name="add_phone_footer">Full guide: docs/setup.md, section \"Several phones\", in the project repository.</string>
+    <string name="add_phone_copy">Copy</string>
 </resources>

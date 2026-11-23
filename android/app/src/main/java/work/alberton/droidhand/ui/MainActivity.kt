@@ -38,6 +38,7 @@ import work.alberton.droidhand.ui.settings.AppearanceScreen
 import work.alberton.droidhand.ui.settings.BackgroundScreen
 import work.alberton.droidhand.ui.settings.ConnectionScreen
 import work.alberton.droidhand.ui.settings.PrivacyScreen
+import work.alberton.droidhand.ui.settings.AddPhoneScreen
 import work.alberton.droidhand.ui.settings.RelayScreen
 import work.alberton.droidhand.ui.theme.DroidHandTheme
 import work.alberton.droidhand.ui.theme.isAppDark
@@ -87,11 +88,11 @@ private fun App(prefs: Prefs) {
             if (Build.VERSION.SDK_INT >= 29) window.isNavigationBarContrastEnforced = false
         }
 
-        BackHandler(enabled = route != Route.HOME) { route = Route.HOME }
+        BackHandler(enabled = route != Route.HOME) { route = if (route == Route.ADD_PHONE) Route.RELAY else Route.HOME }
         AnimatedContent(
             targetState = route,
             transitionSpec = {
-                val forward = targetState != Route.HOME
+                val forward = targetState.ordinal > initialState.ordinal
                 (slideInHorizontally { w -> if (forward) w / 6 else -w / 6 } + fadeIn()) togetherWith
                     (slideOutHorizontally { w -> if (forward) -w / 6 else w / 6 } + fadeOut())
             },
@@ -101,7 +102,8 @@ private fun App(prefs: Prefs) {
             when (r) {
                 Route.HOME -> HomeScreen(prefs, ui, live, relay, onOpen = { route = it }, refresh = { live = readLive(ctx) })
                 Route.CONNECTION -> ConnectionScreen(prefs, relay, back)
-                Route.RELAY -> RelayScreen(relay, back)
+                Route.RELAY -> RelayScreen(relay, back, onAddPhone = { route = Route.ADD_PHONE })
+                Route.ADD_PHONE -> AddPhoneScreen(prefs, onBack = { route = Route.RELAY })
                 Route.BACKGROUND -> BackgroundScreen(prefs, live, back)
                 Route.APPEARANCE -> AppearanceScreen(ui, back)
                 Route.PRIVACY -> PrivacyScreen(prefs, back)

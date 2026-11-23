@@ -28,6 +28,8 @@ import org.json.JSONObject
 import work.alberton.droidhand.R
 import work.alberton.droidhand.relay.RelayClient
 import work.alberton.droidhand.ui.components.Card
+import work.alberton.droidhand.ui.components.Chevron
+import work.alberton.droidhand.ui.components.SettingRow
 import work.alberton.droidhand.ui.components.Note
 import work.alberton.droidhand.ui.components.Page
 import work.alberton.droidhand.ui.components.Pill
@@ -72,7 +74,7 @@ private fun ago(iso: String?): String? = iso?.takeIf { it.isNotBlank() && it != 
  * Only phones marked "admin" on the relay may see it. Refreshes while open.
  */
 @Composable
-fun RelayScreen(relay: RelayClient.State, onBack: () -> Unit) {
+fun RelayScreen(relay: RelayClient.State, onBack: () -> Unit, onAddPhone: () -> Unit) {
     var load by remember { mutableStateOf<Load>(Load.Loading) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle, relay) {
@@ -90,6 +92,12 @@ fun RelayScreen(relay: RelayClient.State, onBack: () -> Unit) {
             Load.NotAdmin -> Note(stringResource(R.string.relay_not_admin))
             is Load.Failed -> Note(stringResource(R.string.relay_failed, l.error))
             is Load.Ok -> RelayStatusView(l.status)
+        }
+        // How to connect one more phone: useful whatever the status above says.
+        Spacer(Modifier.padding(top = 4.dp))
+        Card {
+            SettingRow(R.drawable.ic_developer, stringResource(R.string.add_phone_row), stringResource(R.string.add_phone_row_sub),
+                onClick = onAddPhone) { Chevron() }
         }
     }
 }
