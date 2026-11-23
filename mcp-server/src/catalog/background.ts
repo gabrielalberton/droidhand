@@ -14,6 +14,7 @@ export const background: ToolArea = {
         "'auto' (default: the own window whenever ADB can be turned on — the relay opens an ADB session just for it and turns " +
         "debugging off at bg_close — else native. Prefer it: the own window never takes the focus from the user's screen, so " +
         "their keyboard stays; on the native window any touch or new screen closes it, so use refs there). The user's choice in the app overrides mode (see forcedByUser). " +
+        "Only while the phone is unlocked (Android pauses background apps behind the lock screen: unlock_device first). " +
         "Safety: work in the background only happens while the user can see it (stop button + window, eye bubble or handle). " +
         "If those cannot be shown, the session is closed and calls fail with 'indicators_not_visible' — do not retry in a loop. " +
         "width/height/dpi default to the phone screen's, so apps can move between the screens (launch_app move=true) without being recreated.",

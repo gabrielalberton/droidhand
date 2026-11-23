@@ -45,17 +45,27 @@ class Unlocker(private val svc: DroidHandAccessibilityService) {
         // Each key must show up as one more dot in the PIN field before the next one.
         // If the field can be read and the count does not match, clear it and stop
         // before OK: a key that did not register must never cost a wrong attempt.
+        // Leftover digits (an earlier try) would turn into a wrong PIN: clear them first.
+        if (entryLength() > 0) clearEntry().takeIf { it.isNotEmpty() }?.let { return fail("the PIN field already held digits.$it", null) }
         val canCount = entryLength() == 0
+        SystemClock.sleep(400) // let the pad settle
         for ((i, ch) in pin.withIndex()) {
-            val node = keys[ch] ?: return fail("key '${if (ch.isDigit()) "digit" else "char"}' not found", seen())
-            if (!pressCounted(node, i + 1, canCount)) {
-                clearEntry()
-                return fail("the PIN keys did not respond (nothing was submitted)", null)
+            // Fresh nodes for every key: the pad can re-layout while typing.
+            val node = (if (i == 0) keys else waitForKeys(1000) ?: keys)[ch]
+                ?: return fail("key '${if (ch.isDigit()) "digit" else "char"}' not found", seen())
+            if (pressCounted(node, i + 1, canCount)) continue
+            // Digits gone: the lock screen checked what was there (One UI confirms on its own at
+            // the PIN's length), i.e. a wrong attempt was spent. Never risk another one.
+            if (canCount && i > 0 && entryLength() == 0) {
+                return fail("the lock screen checked an incomplete PIN", null, wrongPin = true)
             }
+            val left = clearEntry()
+            return fail("the PIN keys did not respond as expected (nothing was submitted).$left", null)
         }
+        if (canCount) { SystemClock.sleep(300); if (entryLength() > pin.length) trimTo(pin.length) } // a late double press
         if (canCount && entryLength() != pin.length) {
-            clearEntry()
-            return fail("the PIN field does not match what was typed (nothing was submitted)", null)
+            val left = clearEntry()
+            return fail("the PIN field does not match what was typed (nothing was submitted).$left", null)
         }
         if (waitUnlocked(1200)) return ok()
         // Not auto-confirmed: press OK/Enter.
@@ -73,10 +83,35 @@ class Unlocker(private val svc: DroidHandAccessibilityService) {
     private fun pressCounted(n: AccessibilityNodeInfo, want: Int, canCount: Boolean): Boolean {
         if (!canCount) return press(n).also { SystemClock.sleep(90) }
         if (n.isClickable) n.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        if (waitEntry(want, 400)) return true
-        if (entryLength() >= want) return false // registered twice: give up
-        if (!tap(n)) return false
-        return waitEntry(want, 600)
+        waitEntry(want, 1200)
+        var got = entryLength()
+        // The click did not register (One UI 5): ONE real tap. Never more: an extra digit that
+        // lands unseen makes One UI check a wrong PIN by itself.
+        var tapped = false
+        if (got == want - 1) {
+            tapped = true
+            if (!tap(n)) return false
+            waitEntry(want, 1500)
+            got = entryLength()
+        }
+        // One UI sometimes takes a key twice: delete the extra ones and check.
+        if (got > want) got = trimTo(want)
+        android.util.Log.i("DroidHand", "unlock: key $want -> field $got${if (tapped) " (tapped)" else ""}") // counts only
+        return got == want
+    }
+
+    /** Delete characters until the field holds [want]; returns what it holds after. */
+    private fun trimTo(want: Int): Int {
+        repeat(8) {
+            val now = entryLength()
+            if (now <= want) return now
+            val del = keyguardNodes().firstOrNull { d ->
+                d.isVisibleToUser && d.viewIdResourceName.orEmpty().lowercase().let { it.endsWith("delete_button") || it.endsWith("delete") }
+            } ?: return now
+            if (!tap(del)) press(del)
+            SystemClock.sleep(250)
+        }
+        return entryLength()
     }
 
     private fun waitEntry(want: Int, ms: Long): Boolean {
@@ -95,15 +130,27 @@ class Unlocker(private val svc: DroidHandAccessibilityService) {
         val field = keyguardNodes().firstOrNull { n ->
             n.isVisibleToUser && (n.isPassword || n.viewIdResourceName.orEmpty().lowercase().endsWith("pinentry"))
         } ?: return -1
+        // The cached node can lag behind real taps (seen on One UI 8): read it fresh.
+        field.refresh()
         return field.text?.length ?: 0
     }
 
-    /** Delete what was typed (so a half-typed PIN is never submitted later). */
-    private fun clearEntry() {
-        val del = keyguardNodes().firstOrNull { n ->
-            n.isVisibleToUser && n.viewIdResourceName.orEmpty().lowercase().let { it.endsWith("delete_button") || it.endsWith("delete") }
-        } ?: return
-        repeat(maxOf(entryLength(), 0) + 2) { press(del); SystemClock.sleep(60) }
+    /**
+     * Delete what was typed (so a half-typed PIN is never submitted later), checking the
+     * field empties. A real tap, not an accessibility click: on One UI the click on the
+     * delete key may not register (seen on a Galaxy S24 FE, One UI 8), like the digit keys.
+     */
+    private fun clearEntry(): String {
+        SystemClock.sleep(300) // let late key presses land first
+        repeat(16) {
+            if (entryLength() <= 0) return ""
+            val del = keyguardNodes().firstOrNull { n ->
+                n.isVisibleToUser && n.viewIdResourceName.orEmpty().lowercase().let { it.endsWith("delete_button") || it.endsWith("delete") }
+            } ?: return " The PIN field could not be cleared (no delete key)"
+            if (!tap(del)) press(del)
+            SystemClock.sleep(120)
+        }
+        return if (entryLength() <= 0) "" else " The PIN field could not be cleared: clear it before trying again"
     }
 
     private fun swipeUp() {

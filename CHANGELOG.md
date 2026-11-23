@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### App (Android)
+- **PIN unlock could spend wrong attempts** (seen on a Galaxy S24 FE, One UI 8): the PIN field was read from a stale accessibility cache, so a digit that had registered looked missing, the key was tapped again, and One UI checked the too-long PIN by itself. The field is now read fresh, a key gets at most one extra tap, and if the field empties by itself (the lock screen checked it) automatic unlock turns off at once. Leftover digits are cleared (with real taps, checked) before typing.
+- Background windows refuse with `phone_locked` while the phone is locked: Android pauses their apps behind the lock screen, so they stayed black while the tools reported success.
+
 ## [1.2.3] - 2026-11-23
 
 ### App (Android)

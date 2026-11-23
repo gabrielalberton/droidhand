@@ -46,6 +46,12 @@ class ToolRouter(context: Context) {
         // Every tool may target a display: 0 = phone screen (default), N = background display.
         val display = args.optInt("display", 0)
         svc.displayId = display
+        // Background windows only run unlocked: while the phone is locked Android pauses their
+        // apps (seen on a Galaxy S24 FE: black window, empty tree, though launches "succeed").
+        if ((display != 0 || tool == "bg_open") && tool in ToolPolicy.BG_NEEDS_UNLOCK &&
+            svc.getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked == true) {
+            return ToolResult.fail(ToolPolicy.BG_LOCKED)
+        }
         // Background display: only ours, and only while the user can see the controls.
         if (display != 0) {
             val bg = runCatching { svc.bg }.getOrNull() ?: return ToolResult.fail("accessibility service not ready")

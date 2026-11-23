@@ -67,6 +67,16 @@ object ToolPolicy {
 
     const val NO_SERVICE = "accessibility service not enabled"
 
+    /** Tools that need a background window's app to be running (not just the window). */
+    val BG_NEEDS_UNLOCK = setOf(
+        "bg_open", "launch_app", "open_url", "screen_snapshot", "screen_capture", "tap", "long_press", "swipe",
+        "scroll", "type_text", "key_event", "go_home", "get_foreground_app", "list_windows", "request_user_help",
+    )
+
+    const val BG_LOCKED = "phone_locked: background windows only work while the phone is unlocked (Android " +
+        "pauses their apps behind the lock screen). Call unlock_device first (if the user enabled it), or wait " +
+        "for the user to unlock; the main screen tools work on the lock screen itself."
+
     const val NO_WSS = "no_secure_settings: WRITE_SECURE_SETTINGS is not granted. On the phone: DroidHand → " +
         "Permissions → Secure settings → Pair from the app (or once from a computer: adb shell pm grant " +
         "work.alberton.droidhand android.permission.WRITE_SECURE_SETTINGS)."
