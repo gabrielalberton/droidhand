@@ -214,4 +214,12 @@
     <string name="invite_scan_failed">Could not open the QR scanner (it needs Google Play services). Use Paste invite instead.</string>
     <string name="add_phone_qr_cd">QR code with the invite</string>
     <string name="add_phone_qr_note">The QR code holds the download link, the relay address and the token. The new phone\'s camera opens the download page; DroidHand\'s Scan QR code connects.</string>
+    <string name="update_title">Version %1$s is out</string>
+    <string name="update_body">You have %1$s. The new version is downloaded from the project\'s GitHub releases and checked before installing.</string>
+    <string name="update_download">Download and install</string>
+    <string name="update_downloading">Downloading…</string>
+    <string name="update_install">Install</string>
+    <string name="update_whats_new">What\'s new</string>
+    <string name="update_failed">Download failed: %1$s</string>
+    <string name="update_allow_note">Android asks you to let DroidHand install apps once: turn it on, come back and tap Install.</string>
 </resources>

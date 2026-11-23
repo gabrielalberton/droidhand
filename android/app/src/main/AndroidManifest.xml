@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Confirm the user (fingerprint/face/PIN) before saving or showing the unlock PIN -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- "New version": hand the downloaded release APK to Android's installer -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Granted once via ADB: pm grant work.alberton.droidhand android.permission.WRITE_SECURE_SETTINGS -->
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" xmlns:tools="http://schemas.android.com/tools" />
@@ -87,6 +89,26 @@
             android:name=".shell.ShellBridgeProvider"
             android:authorities="work.alberton.droidhand.shell"
             android:exported="true" />
+
+        <!-- Update APKs downloaded from the GitHub release, opened by the system installer. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="work.alberton.droidhand.updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/update_paths" />
+        </provider>
+
+        <!-- After an update: turn the accessibility service back on if the user had it on. -->
+        <receiver
+            android:name=".update.UpdatedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <service
             android:name=".a11y.DroidHandAccessibilityService"

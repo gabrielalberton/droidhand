@@ -51,6 +51,7 @@ fun HomeScreen(
         Header()
         Spacer(Modifier.height(24.dp))
         StatusCard(prefs, live, relay, onOpen)
+        UpdateCard()
 
         val p = live.perms
         SectionLabel(

@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-22
+
 ### Relay + MCP server
 - **Several phones on one relay**, each with its own settings in `~/.config/droidhand/devices.json`: token (which also identifies the phone), name, role and ADB mode. Without the file nothing changes (one phone, id `phone`).
 - Every per-phone tool takes an optional `device`; new `list_devices`. With more than one phone connected, a call without `device` fails instead of guessing. `panic_disconnect` without `device` severs every phone. Audit lines and control-channel events carry the device.
@@ -17,6 +19,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Tool descriptions: `open_url`, `key_event`, `go_home`, `global_action` and `panic_disconnect` say what they do on a background display and that a panic also stops the app until someone reopens it on the phone.
 
 ### App (Android)
+- **New-version notice**: when the app opens it checks the latest GitHub release; if it is newer, the home screen offers **Download and install** (the APK is checked against the release's SHA256SUMS and handed to Android's installer). After an update the app turns its accessibility service back on by itself (with the secure-settings grant), since Android leaves it off.
 - **Add a phone from the app**: on an admin phone, Relay → Add another phone → name it → Add phone. The relay creates its token and `devices.json` entry and accepts it right away (no restart); the app shows an invite (latest release link, relay address, token) as text and as a **QR code**, and the new phone's **Connection → Scan QR code** (Google's code scanner, no camera permission) or **Paste invite** fills everything in. The QR code is the release page with the connection in the URL fragment: a plain camera opens the download page. Relay request `add_device` (admin phones only; the token is never written to the audit log).
 - **Relay → Add another phone**: step-by-step instructions to connect one more phone (token, devices.json, relay restart, app setup, one-time grant, the install-phone.sh shortcut), with this phone's relay address filled in and tap-to-copy commands.
 - New **Relay** screen (read-only): relay version, agent sessions and every phone with its connection state, model, app version and ADB mode. Only phones marked admin on the relay can see it.
