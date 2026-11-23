@@ -84,9 +84,39 @@ object ToolPolicy {
     /** True when a Stop tapped at [stopAt] (elapsedRealtime, 0 = none) must still be reported at [now]. */
     fun stopIsFresh(now: Long, stopAt: Long): Boolean = stopAt != 0L && now - stopAt < STOP_NOTICE_MS
 
-    /** Should [tool] on [display] ask the user first? Pop-up windows (launch bounds) never ask. */
-    fun needsMainScreenGate(tool: String, display: Int, hasBounds: Boolean): Boolean =
-        tool in MAIN_GATED && display == 0 && !hasBounds
+    /**
+     * Should [tool] on [display] ask the user first? Never for the agent's own pop-up or split
+     * window ([agentWindow]: opening a pop-up, or acting inside a window the agent opened).
+     */
+    fun needsMainScreenGate(tool: String, display: Int, agentWindow: Boolean): Boolean =
+        tool in MAIN_GATED && display == 0 && !agentWindow
+
+    /**
+     * How a window with bounds [l],[t],[r],[b] sits on a [w]×[h] screen: "full" (the whole
+     * screen, give or take the bars), "split" (full width or height, touching two opposite
+     * edges, the rest of the screen left to another app) or "popup" (anything else).
+     */
+    fun windowLayout(l: Int, t: Int, r: Int, b: Int, w: Int, h: Int): String {
+        val tol = maxOf(w, h) / 12 // status and navigation bars, split divider
+        val fullW = l <= tol && r >= w - tol
+        val fullH = t <= tol && b >= h - tol
+        return when {
+            fullW && fullH -> "full"
+            fullW && (b - t) < h - tol -> if (t <= tol || b >= h - tol) "split" else "popup"
+            fullH && (r - l) < w - tol -> if (l <= tol || r >= w - tol) "split" else "popup"
+            else -> "popup"
+        }
+    }
+
+    /** Default pop-up bounds on a [w]×[h] screen: the lower part, leaving the user's app visible above. */
+    fun defaultPopupBounds(w: Int, h: Int): IntArray =
+        intArrayOf(w * 6 / 100, h * 38 / 100, w * 94 / 100, h * 90 / 100)
+
+    const val WINDOW_KEYS = "keys (back/home/recents) go to the focused window, and the window you chose is not " +
+        "focused (the user is using another one). Use the app's own buttons by ref instead."
+
+    const val OUTSIDE_WINDOW = "point_outside_window: these coordinates are outside the window you chose; " +
+        "they would touch another app. Use a ref, or coordinates from that window's screen_snapshot."
 
     /** Swipe (x1, y1, x2, y2) that scrolls a [w]×[h] screen in [direction] (content moves that way), or null. */
     fun scrollSwipe(direction: String, w: Int, h: Int): IntArray? {

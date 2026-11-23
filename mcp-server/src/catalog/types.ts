@@ -31,5 +31,12 @@ export interface ToolArea {
 /** Stable element reference returned by `screen_snapshot`. */
 export const ref = z.string().describe("stable element ref from screen_snapshot, e.g. '@4'");
 
+/** One window on the display: for pop-up/split windows and the windows the user has open side by side. */
+export const windowParam = z.union([z.number().int(), z.string()]).optional().describe(
+  "one window on that display: an id from list_windows, or a package (its top window). Without it the foreground window is used. " +
+    "Refs then click and type without touching (the user's focus and keyboard stay in their app); " +
+    "coordinates outside that window are refused; keys (back) only while it is the focused window",
+);
+
 /** Settings namespaces accepted by get_setting / set_setting. */
 export const settingNamespace = z.enum(["system", "secure", "global"]);

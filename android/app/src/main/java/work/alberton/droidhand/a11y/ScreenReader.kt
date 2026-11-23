@@ -25,7 +25,14 @@ internal class ScreenReader(private val svc: DroidHandAccessibilityService) {
     @Volatile
     private var refNodes: Map<String, AccessibilityNodeInfo> = emptyMap()
 
+    /** ref -> editable node from the latest snapshot (type_text writes into it without touching). */
+    @Volatile
+    private var refEditables: Map<String, AccessibilityNodeInfo> = emptyMap()
+
     private val onMainDisplay get() = svc.displayId == Display.DEFAULT_DISPLAY
+
+    /** The call names one window (`window` argument): never fall back to the focused one. */
+    private val windowChosen get() = svc.windowTarget != null
 
     private fun displayWindows(): List<AccessibilityWindowInfo> =
         if (onMainDisplay) svc.windows else svc.windowsOnAllDisplays.get(svc.displayId) ?: emptyList()
@@ -36,6 +43,7 @@ internal class ScreenReader(private val svc: DroidHandAccessibilityService) {
      * active or focused non-overlay window, else the top-most application window.
      */
     private fun targetRoot(): AccessibilityNodeInfo? {
+        if (windowChosen) return targetWindow()?.root
         val ws = displayWindows().filter { it.type != AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY }
         val pick = ws.firstOrNull { it.isActive && it.root != null }
             ?: ws.firstOrNull { it.isFocused && it.root != null }
@@ -44,28 +52,55 @@ internal class ScreenReader(private val svc: DroidHandAccessibilityService) {
         return pick?.root ?: if (onMainDisplay) svc.rootInActiveWindow else null
     }
 
+    /**
+     * The window the call names with `window`: a window id from list_windows, or a package
+     * (its top-most window). Null when none is named or it is not on this display.
+     */
+    fun targetWindow(): AccessibilityWindowInfo? {
+        val t = svc.windowTarget ?: return null
+        val ws = displayWindows().filter { it.type != AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY }
+        t.toIntOrNull()?.let { id -> return ws.firstOrNull { it.id == id } }
+        return ws.filter { it.root?.packageName?.toString() == t }.maxByOrNull { it.layer }
+    }
+
+    /** Screen bounds of the named window (null: none named or not found). */
+    fun targetBounds(): Rect? = targetWindow()?.let { w -> Rect().also { w.getBoundsInScreen(it) } }
+
     fun listWindows(): JSONArray {
         val out = JSONArray()
         for (w in displayWindows()) {
+            val b = Rect().also { w.getBoundsInScreen(it) }
             out.put(JSONObject()
+                .put("id", w.id)
                 .put("type", w.type).put("layer", w.layer).put("active", w.isActive).put("focused", w.isFocused)
+                .put("bounds", JSONArray().put(b.left).put(b.top).put(b.right).put(b.bottom))
                 .put("title", w.title?.toString() ?: "").put("package", w.root?.packageName?.toString() ?: JSONObject.NULL))
         }
         return out
     }
 
+    /** Windows of [pkg] on the main screen, as (id, bounds). */
+    fun windowsOf(pkg: String): List<Pair<Int, Rect>> = svc.windows
+        .filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION && it.root?.packageName?.toString() == pkg }
+        .map { w -> w.id to Rect().also { w.getBoundsInScreen(it) } }
+
     fun foregroundPackage(): String = targetRoot()?.packageName?.toString() ?: ""
 
     /** Serialize the active window into a bounded list of @ref nodes. */
     fun snapshot(maxNodes: Int = 300): JSONObject {
-        val root = targetRoot() ?: return JSONObject().put("error", "no active window")
+        val root = targetRoot() ?: return JSONObject().put("error",
+            if (windowChosen) windowNotFound() else "no active window")
         val nodes = JSONArray()
         val points = HashMap<String, IntArray>()
         val clickables = HashMap<String, AccessibilityNodeInfo>()
-        walk(root, nodes, points, maxNodes, clickables)
+        val editables = HashMap<String, AccessibilityNodeInfo>()
+        walk(root, nodes, points, maxNodes, clickables, editables)
         refPoints = points
         refNodes = clickables
-        return JSONObject()
+        refEditables = editables
+        val out = JSONObject()
+        if (windowChosen) targetWindow()?.let { out.put("window", it.id) }
+        return out
             .put("package", root.packageName?.toString() ?: "")
             .put("count", nodes.length())
             .put("nodes", nodes)
@@ -73,7 +108,7 @@ internal class ScreenReader(private val svc: DroidHandAccessibilityService) {
 
     private fun walk(
         node: AccessibilityNodeInfo?, out: JSONArray, points: HashMap<String, IntArray>, maxNodes: Int,
-        clickables: HashMap<String, AccessibilityNodeInfo>,
+        clickables: HashMap<String, AccessibilityNodeInfo>, editables: HashMap<String, AccessibilityNodeInfo>,
     ) {
         if (node == null || out.length() >= maxNodes) return
         if (!node.isVisibleToUser) return
@@ -98,8 +133,9 @@ internal class ScreenReader(private val svc: DroidHandAccessibilityService) {
             out.put(o)
             points[ref] = intArrayOf(b.centerX(), b.centerY())
             clickableSelfOrAncestor(node)?.let { clickables[ref] = it }
+            if (node.isEditable) editables[ref] = node
         }
-        for (i in 0 until node.childCount) walk(node.getChild(i), out, points, maxNodes, clickables)
+        for (i in 0 until node.childCount) walk(node.getChild(i), out, points, maxNodes, clickables, editables)
     }
 
     fun pointFor(ref: String): IntArray? = refPoints[ref]
@@ -149,10 +185,31 @@ internal class ScreenReader(private val svc: DroidHandAccessibilityService) {
         return null
     }
 
-    /** The focused input field; on a background display never the global focus (it may be the user's field). */
+    fun windowNotFound(): String = "window_not_found: no window '${svc.windowTarget}' on this screen " +
+        "(it was closed, or its id changed after a new screen): call list_windows"
+
+    /**
+     * The focused input field. Never the global focus on a background display or when the call
+     * names a window: it may be the user's own field (their keyboard is open there).
+     */
     private fun focusedInput(): AccessibilityNodeInfo? =
-        (if (onMainDisplay) svc.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) else null)
+        (if (onMainDisplay && !windowChosen) svc.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) else null)
             ?: targetRoot()?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+
+    /** Write into the editable field [ref] directly (no touch, so the user's focus and keyboard stay). */
+    fun typeIntoRef(ref: String, text: String): Boolean = runCatching {
+        val n = refEditables[ref] ?: return false
+        if (!n.refresh() || !n.isVisibleToUser) return false
+        val args = Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text) }
+        n.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args).also { if (it) lastTyped = n }
+    }.getOrDefault(false)
+
+    /** Field last written by [typeIntoRef]: not focused, so "enter" goes to it explicitly. */
+    @Volatile
+    private var lastTyped: AccessibilityNodeInfo? = null
+
+    /** Is the named window the focused one (where keys like back go)? */
+    fun targetFocused(): Boolean = targetWindow()?.isFocused == true
 
     fun typeText(text: String): Boolean {
         val target = focusedInput()
@@ -183,6 +240,12 @@ internal class ScreenReader(private val svc: DroidHandAccessibilityService) {
     }
 
     /** "Enter" on the focused field (IME action: search/go/send/next). */
-    fun imeEnter(): Boolean =
-        focusedInput()?.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id) ?: false
+    fun imeEnter(): Boolean {
+        val enter = AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id
+        if (focusedInput()?.performAction(enter) == true) return true
+        // A field written without focus (typeIntoRef): only if it is still in the window we work on.
+        if (onMainDisplay && !windowChosen) return false
+        val n = lastTyped ?: return false
+        return runCatching { n.refresh() && n.performAction(enter) }.getOrDefault(false)
+    }
 }

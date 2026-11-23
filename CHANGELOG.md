@@ -7,6 +7,11 @@ All notable changes to this project are documented here. The format follows [Kee
 ### App (Android)
 - **PIN unlock could spend wrong attempts** (seen on a Galaxy S24 FE, One UI 8): the PIN field was read from a stale accessibility cache, so a digit that had registered looked missing, the key was tapped again, and One UI checked the too-long PIN by itself. The field is now read fresh, a key gets at most one extra tap, and if the field empties by itself (the lock screen checked it) automatic unlock turns off at once. Leftover digits are cleared (with real taps, checked) before typing.
 - Background windows refuse with `phone_locked` while the phone is locked: Android pauses their apps behind the lock screen, so they stayed black while the tools reported success.
+- **Pop-up and split windows without ADB**: `launch_app popup=true` opens a new copy of the app as a pop-up over the lower part of the main screen (no prompt), `split=true` in the other half of split screen (the user is asked first: it shrinks their app). The result gives the window id and its real `layout`; `full` means the phone ignored the request.
+- **`window` argument** on `screen_snapshot`, `get_foreground_app`, `tap`, `long_press`, `swipe`, `scroll`, `type_text` and `key_event`: work in one window of the screen (a pop-up, a split half, or an app the user has open beside theirs). Refs click and `type_text` with a ref writes into that field without touching, so the user's focus and keyboard stay; coordinates outside the window and keys while it is not focused are refused. Acting inside a pop-up/split window the agent opened does not ask. `list_windows` now returns each window's id and bounds.
+
+### MCP server
+- Sends agents a short guide (MCP `instructions`) on where to work: the background window first (own window when ADB can be turned on), pop-up/split only when it does not fit (no background window, apps that refuse it, system dialogs, the user's final step), and how to act there without taking the user's keyboard.
 
 ## [1.2.3] - 2026-11-23
 

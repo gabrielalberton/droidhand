@@ -95,6 +95,9 @@ class AppTools : ToolGroup {
                     if (task != null) return ToolResult.ok(JSONObject().put("launched", pkg).put("display", 0)
                         .put("moved", true).put("task", task).put("via", "shell"))
                 }
+                // Next to the user's app, no ADB needed: a pop-up window or split screen (a new copy).
+                if (!move && (args.optBoolean("popup", false) || args.optBoolean("split", false) || bounds != null))
+                    return launchBeside(ctx, intent, pkg, bounds, split = args.optBoolean("split", false))
                 // Main screen. With move, explicitly: the task may live on a background display.
                 if (move) opts.setLaunchDisplayId(0)
                 // One UI: launch bounds on the main display open the app as a pop-up (freeform) window.
@@ -105,8 +108,54 @@ class AppTools : ToolGroup {
         return ToolResult.ok(JSONObject().put("launched", pkg).put("display", display).put("moved", move))
     }
 
+    /**
+     * Open [pkg] as a new copy beside the user's app on the main screen: a One UI pop-up
+     * window ([bounds], or the lower part of the screen) or, with [split], the other half of
+     * split screen (FLAG_ACTIVITY_LAUNCH_ADJACENT). Works through accessibility alone (no ADB).
+     * Reports the window it got and how it actually sits on screen: phones that do not support
+     * one of them open the app full screen instead, and the agent must know.
+     */
+    private fun launchBeside(ctx: ToolContext, intent: Intent, pkg: String, bounds: org.json.JSONArray?, split: Boolean): ToolResult {
+        val size = Point().also { ctx.app.getSystemService(DisplayManager::class.java).getDisplay(0)?.getRealSize(it) }
+        val svc = ctx.svc
+        val before = svc?.windowsOf(pkg)?.map { it.first }?.toSet().orEmpty()
+        intent.addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+        val opts = ActivityOptions.makeBasic()
+        if (split) intent.addFlags(Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT)
+        else {
+            val b = bounds?.let { j -> IntArray(4) { j.getInt(it) } } ?: ToolPolicy.defaultPopupBounds(size.x, size.y)
+            opts.setLaunchBounds(Rect(b[0], b[1], b[2], b[3]))
+        }
+        agentWindows.add(pkg)
+        ctx.app.startActivity(intent, opts.toBundle())
+        val res = JSONObject().put("launched", pkg).put("display", 0).put("requested", if (split) "split" else "popup")
+        if (svc == null || size.x == 0) return ToolResult.ok(res)
+        var win: Pair<Int, Rect>? = null
+        for (i in 0 until 30) {
+            Thread.sleep(100)
+            win = svc.windowsOf(pkg).firstOrNull { it.first !in before }
+            if (win != null) break
+        }
+        // No new window seen (e.g. Android reused the app's window): take any of it.
+        val w = win ?: svc.windowsOf(pkg).firstOrNull()
+            ?: return ToolResult.ok(res.put("window", JSONObject.NULL).put("note", "the window did not show up yet: call list_windows"))
+        val r = w.second
+        val layout = ToolPolicy.windowLayout(r.left, r.top, r.right, r.bottom, size.x, size.y)
+        res.put("window", w.first).put("bounds", org.json.JSONArray().put(r.left).put(r.top).put(r.right).put(r.bottom))
+            .put("layout", layout)
+        if (layout == "full") res.put("note", "this phone opened the app FULL SCREEN, not as ${res.getString("requested")}: " +
+            "it now covers the user's app. Finish quickly or tell the user; next time use the background window (bg_open).")
+        else res.put("next", "pass window=${w.first} (or window=$pkg) to screen_snapshot, tap, type_text, scroll")
+        return ToolResult.ok(res)
+    }
+
     companion object {
         /** Apps the agent opened on a background display (display ids are never reused while running). */
         private val launchedOnBg: MutableSet<Pair<Int, String>> = java.util.Collections.synchronizedSet(mutableSetOf())
+
+        /** Packages the agent opened as a pop-up or split window on the main screen. */
+        private val agentWindows: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf())
+
+        fun isAgentWindow(pkg: String): Boolean = pkg in agentWindows
     }
 }

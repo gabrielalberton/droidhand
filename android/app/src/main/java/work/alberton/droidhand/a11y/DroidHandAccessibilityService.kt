@@ -33,6 +33,10 @@ class DroidHandAccessibilityService : AccessibilityService() {
     @Volatile
     var displayId: Int = Display.DEFAULT_DISPLAY
 
+    /** Window the call names (`window` argument: id or package), null = the foreground one. Set per tool call. */
+    @Volatile
+    var windowTarget: String? = null
+
     /** When the user last tapped Stop (elapsedRealtime), 0 = not pending. Consumed by the tool router. */
     @Volatile
     var stopRequestedAt = 0L
@@ -135,6 +139,12 @@ class DroidHandAccessibilityService : AccessibilityService() {
     fun pointFor(ref: String): IntArray? = reader.pointFor(ref)
     fun clickRef(ref: String): Boolean = reader.clickRef(ref)
     fun scrollAction(direction: String): Boolean = reader.scrollAction(direction)
+    fun targetWindowBounds(): android.graphics.Rect? = reader.targetBounds()
+    fun targetWindowPackage(): String? = reader.targetWindow()?.root?.packageName?.toString()
+    fun targetWindowFocused(): Boolean = reader.targetFocused()
+    fun windowNotFound(): String = reader.windowNotFound()
+    fun windowsOf(pkg: String) = reader.windowsOf(pkg)
+    fun typeIntoRef(ref: String, text: String): Boolean = reader.typeIntoRef(ref, text)
     fun capture(maxWidth: Int = 720, quality: Int = 70): JSONObject = screenshots.capture(maxWidth, quality)
 
     // ---- Interaction ----

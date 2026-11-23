@@ -60,4 +60,22 @@ class ToolPolicyTest {
         // The MCP server and agents match on this prefix.
         assertTrue(ToolPolicy.STOPPED.startsWith("stopped_by_user:"))
     }
+
+    @Test fun windowLayoutOnAPhoneScreen() {
+        val w = 1080; val h = 2340
+        assertEquals("full", ToolPolicy.windowLayout(0, 0, w, h, w, h))
+        assertEquals("full", ToolPolicy.windowLayout(0, 80, w, 2210, w, h)) // minus status and nav bars
+        assertEquals("split", ToolPolicy.windowLayout(0, 0, w, 1150, w, h)) // top half
+        assertEquals("split", ToolPolicy.windowLayout(0, 1190, w, h, w, h)) // bottom half
+        assertEquals("split", ToolPolicy.windowLayout(0, 0, 1150, 1080, 2340, 1080)) // landscape left half
+        val p = ToolPolicy.defaultPopupBounds(w, h)
+        assertEquals("popup", ToolPolicy.windowLayout(p[0], p[1], p[2], p[3], w, h))
+        assertEquals("popup", ToolPolicy.windowLayout(0, 600, w, 1700, w, h)) // full width, middle
+    }
+
+    @Test fun defaultPopupLeavesTheTopForTheUser() {
+        val b = ToolPolicy.defaultPopupBounds(1080, 2340)
+        assertTrue(b[1] > 2340 / 3)
+        assertTrue(b[0] > 0 && b[2] < 1080 && b[3] < 2340)
+    }
 }

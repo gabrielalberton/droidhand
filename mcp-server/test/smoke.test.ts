@@ -32,6 +32,12 @@ test("MCP server boots over stdio and exposes the tool catalog", async () => {
     assert.ok(!names.includes("get_notifications"), "planned tools are not offered");
     assert.ok(names.includes("adb_session_begin"), "ADB sessions offered");
     assert.equal(tools.length, CATALOG.length, "every catalog tool is registered");
+    // Agents get the "where to work" guide: background window first, pop-up/split only when it helps.
+    const instructions = client.getInstructions() ?? "";
+    assert.match(instructions, /bg_open/);
+    assert.match(instructions, /popup=true/);
+    const tap = tools.find((t) => t.name === "tap");
+    assert.ok(tap?.inputSchema.properties && "window" in tap.inputSchema.properties, "tap takes window");
 
     // With no relay daemon running, a forwarded tool degrades gracefully (non-fatal error).
     const res = await client.callTool({ name: "tap", arguments: { x: 1, y: 1 } });
