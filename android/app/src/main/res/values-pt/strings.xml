@@ -196,10 +196,15 @@
     <string name="add_phone_err_old_relay">O relay do computador é antigo e não adiciona celulares. Atualize o DroidHand no computador ou use os passos abaixo.</string>
     <string name="add_phone_err_taken">Já existe um celular chamado %1$s.</string>
     <string name="add_phone_p1">Instale o Tailscale e entre na mesma tailnet do computador.</string>
-    <string name="add_phone_p2">Baixe e instale o DroidHand (o link também está no convite):</string>
-    <string name="add_phone_p3">Copie o convite para o celular novo e, no DroidHand dele, abra Conexão → Colar convite. O endereço e o token são preenchidos sozinhos.</string>
+    <string name="add_phone_p2">Aponte a câmera do celular novo para o QR code para abrir a página de download (ou use este link) e instale o DroidHand:</string>
+    <string name="add_phone_p3">No DroidHand do celular novo, abra Conexão → Ler QR code (ou copie o convite para ele e toque em Colar convite). O endereço e o token são preenchidos sozinhos.</string>
     <string name="invite_text">Convite do DroidHand para %1$s\n\n1. Baixe o app: %2$s\n2. Abra DroidHand → Conexão → Colar convite (ou preencha à mão):\nRelay: %3$s\nToken: %4$s</string>
     <string name="invite_paste">Colar convite</string>
     <string name="invite_paste_ok">Endereço e token preenchidos.</string>
     <string name="invite_paste_none">Nenhum convite na área de transferência. Copie o convite inteiro e tente de novo.</string>
+    <string name="invite_scan">Ler QR code</string>
+    <string name="invite_scan_not_invite">Este QR code não é um convite do DroidHand.</string>
+    <string name="invite_scan_failed">Não deu para abrir o leitor de QR code (ele precisa do Google Play services). Use Colar convite.</string>
+    <string name="add_phone_qr_cd">QR code com o convite</string>
+    <string name="add_phone_qr_note">O QR code tem o link de download, o endereço do relay e o token. A câmera do celular novo abre a página de download; o Ler QR code do DroidHand conecta.</string>
 </resources>

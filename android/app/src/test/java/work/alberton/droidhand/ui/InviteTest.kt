@@ -10,12 +10,18 @@ class InviteTest {
     @Test fun readsAddressAndTokenFromAnInvite() {
         val text = "Convite do DroidHand para Tablet\n\n1. Baixe o app: https://github.com/x/releases/latest\n" +
             "2. Abra DroidHand → Conexão → Colar convite:\nRelay: ws://100.81.104.50:8787\nToken: $tok"
-        assertEquals("ws://100.81.104.50:8787" to tok, Invite.parse(text))
+        assertEquals(Invite.Data("ws://100.81.104.50:8787", tok), Invite.parse(text))
     }
 
     @Test fun ignoresTextWithoutBoth() {
         assertNull(Invite.parse("Relay: ws://10.0.0.1:8787"))
         assertNull(Invite.parse("Token: $tok"))
         assertNull(Invite.parse("https://github.com/x/releases/latest"))
+    }
+
+    @Test fun readsTheQrLinkBack() {
+        val link = Invite.link("Tablet da Ana", "ws://100.81.104.50:8787", tok)
+        assertEquals(true, link.startsWith(Invite.DOWNLOAD_URL + "#"))
+        assertEquals(Invite.Data("ws://100.81.104.50:8787", tok, "Tablet da Ana"), Invite.parse(link))
     }
 }

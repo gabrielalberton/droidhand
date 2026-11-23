@@ -10,6 +10,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -69,15 +72,26 @@ fun ConnectionScreen(prefs: Prefs, relay: RelayClient.State, onBack: () -> Unit)
         )
         Spacer(Modifier.height(12.dp))
         // Invite made by an admin phone (Relay → Add another phone): fills both fields.
-        OutlinedButton(
-            onClick = {
-                val inv = Invite.fromClipboard(ctx)
-                if (inv == null) Toast.makeText(ctx, R.string.invite_paste_none, Toast.LENGTH_LONG).show()
-                else { url = inv.first; token = inv.second; prefs.relayUrl = url; prefs.token = token
-                    Toast.makeText(ctx, R.string.invite_paste_ok, Toast.LENGTH_SHORT).show() }
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.invite_paste)) }
+        val use = { inv: Invite.Data ->
+            url = inv.relay; token = inv.token; prefs.relayUrl = url; prefs.token = token
+            Toast.makeText(ctx, R.string.invite_paste_ok, Toast.LENGTH_SHORT).show()
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = {
+                    Invite.scan(ctx) { inv, err ->
+                        if (inv != null) use(inv) else err?.let { Toast.makeText(ctx, it, Toast.LENGTH_LONG).show() }
+                    }
+                },
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.invite_scan)) }
+            OutlinedButton(
+                onClick = {
+                    Invite.fromClipboard(ctx)?.let(use) ?: Toast.makeText(ctx, R.string.invite_paste_none, Toast.LENGTH_LONG).show()
+                },
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.invite_paste)) }
+        }
         Spacer(Modifier.height(16.dp))
         OutlinedTextField(
             value = url,

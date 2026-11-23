@@ -203,10 +203,15 @@
     <string name="add_phone_err_old_relay">The relay on the computer is older and cannot add phones. Update DroidHand on the computer, or use the steps below.</string>
     <string name="add_phone_err_taken">There is already a phone called %1$s.</string>
     <string name="add_phone_p1">Install Tailscale and sign in to the same tailnet as the computer.</string>
-    <string name="add_phone_p2">Download and install DroidHand (the link is in the invite too):</string>
-    <string name="add_phone_p3">Copy the invite to the new phone and, in its DroidHand app, open Connection → Paste invite. The address and token are filled in.</string>
+    <string name="add_phone_p2">Point the new phone\'s camera at the QR code to open the download page (or use this link), then install DroidHand:</string>
+    <string name="add_phone_p3">In the new phone\'s DroidHand, open Connection → Scan QR code (or copy the invite there and tap Paste invite). The address and token are filled in.</string>
     <string name="invite_text">DroidHand invite for %1$s\n\n1. Get the app: %2$s\n2. Open DroidHand → Connection → Paste invite (or fill in by hand):\nRelay: %3$s\nToken: %4$s</string>
     <string name="invite_paste">Paste invite</string>
     <string name="invite_paste_ok">Address and token filled in.</string>
     <string name="invite_paste_none">No invite on the clipboard. Copy the whole invite and try again.</string>
+    <string name="invite_scan">Scan QR code</string>
+    <string name="invite_scan_not_invite">This QR code is not a DroidHand invite.</string>
+    <string name="invite_scan_failed">Could not open the QR scanner (it needs Google Play services). Use Paste invite instead.</string>
+    <string name="add_phone_qr_cd">QR code with the invite</string>
+    <string name="add_phone_qr_note">The QR code holds the download link, the relay address and the token. The new phone\'s camera opens the download page; DroidHand\'s Scan QR code connects.</string>
 </resources>

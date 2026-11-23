@@ -49,6 +49,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
 import org.json.JSONObject
 
 private const val APP = "work.alberton.droidhand"
@@ -127,6 +129,7 @@ private fun CreateInApp(relay: String, connected: Boolean) {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var invite by rememberSaveable { mutableStateOf<String?>(null) }
+    var qrLink by rememberSaveable { mutableStateOf<String?>(null) }
     val idOk = Regex("^[a-z0-9][a-z0-9_-]{0,31}$").matches(id)
 
     Card {
@@ -135,13 +138,21 @@ private fun CreateInApp(relay: String, connected: Boolean) {
             if (done != null) {
                 Text(stringResource(R.string.add_phone_created), style = MaterialTheme.typography.bodyLarge, color = cs.onSurface)
                 Text(stringResource(R.string.add_phone_invite_note), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                qrLink?.let { link ->
+                    val bmp = remember(link) { Invite.qr(link, 720).asImageBitmap() }
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Image(bmp, stringResource(R.string.add_phone_qr_cd),
+                            modifier = Modifier.size(260.dp).clip(RoundedCornerShape(12.dp)).background(androidx.compose.ui.graphics.Color.White))
+                    }
+                    Text(stringResource(R.string.add_phone_qr_note), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                }
                 Text(done, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, color = cs.onSurface,
                     modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(cs.surfaceContainerHighest).padding(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { copy(ctx, done) }) { Text(stringResource(R.string.add_phone_copy_invite)) }
                     OutlinedButton(onClick = { Invite.share(ctx, done) }) { Text(stringResource(R.string.invite_share)) }
                 }
-                TextButton(onClick = { invite = null; name = ""; id = ""; idEdited = false; admin = false }) {
+                TextButton(onClick = { invite = null; qrLink = null; name = ""; id = ""; idEdited = false; admin = false }) {
                     Text(stringResource(R.string.add_phone_another))
                 }
                 return@Column
@@ -182,6 +193,7 @@ private fun CreateInApp(relay: String, connected: Boolean) {
                             res == null -> error = ctx.getString(R.string.add_phone_err_offline)
                             res.optBoolean("ok") -> res.optJSONObject("data")?.let { d ->
                                 invite = Invite.text(ctx, d.optString("name"), relay, d.optString("token"))
+                                qrLink = Invite.link(d.optString("name"), relay, d.optString("token"))
                             }
                             else -> error = res.optString("error").let { e ->
                                 when {

@@ -114,7 +114,7 @@ In the app, **Background window** shows which method the agent may use and the h
 
 One relay can drive several phones, each with its own token and settings.
 
-**From the app (easiest):** on an admin phone, open **Relay → Add another phone**, give the new phone a name and tap **Add phone**. The relay writes its token (`devices/<id>.token`, `0600`) and its entry in `devices.json` (the old file is kept as `devices.json.bak`) and accepts it at once, no restart. The app shows an **invite** with the download link of the latest release, the relay address and the token, shown only that once: copy or share it to the new phone, install the app there, then **Connection → Paste invite** fills in the address and token. Finish with the permissions below. This needs a `devices.json` to exist already.
+**From the app (easiest):** on an admin phone, open **Relay → Add another phone**, give the new phone a name and tap **Add phone**. The relay writes its token (`devices/<id>.token`, `0600`) and its entry in `devices.json` (the old file is kept as `devices.json.bak`) and accepts it at once, no restart. The app shows an **invite** with the download link of the latest release, the relay address and the token, shown only that once: the same invite is shown as a **QR code** (the release page with the connection in the URL fragment, which is never sent to GitHub). On the new phone, point the camera at it to open the download page, install the app, then **Connection → Scan QR code** (or **Paste invite** with the copied text) fills in the address and token. Finish with the permissions below. This needs a `devices.json` to exist already.
 
 **By hand:** create `~/.config/droidhand/devices.json` (`chmod 600`; token files relative to it):
 

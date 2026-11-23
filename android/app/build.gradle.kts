@@ -67,6 +67,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Invites: QR code drawn offline (ZXing core) and read with Google's code scanner
+    // (Play services UI, so the app needs no camera permission).
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 
     val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
     implementation(composeBom)
