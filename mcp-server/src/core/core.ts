@@ -1,5 +1,6 @@
 import { legacyDevice, type Config, type DeviceConfig } from "../config.js";
 import { lockoutError, lockoutReason } from "./lockout.js";
+import { validateNewDevice, writeNewDevice } from "./addDevice.js";
 import { Relay } from "../relay/server.js";
 import { CATALOG_BY_NAME } from "../catalog.js";
 import type { DeviceStatus, RelayStatus } from "../protocol.js";
@@ -67,16 +68,18 @@ export class Core {
     this.relay = new Relay(cfg.relayHost, cfg.relayPort, new Map(devices.map((d) => [d.token, d.id])), cfg.cmdTimeoutMs);
     this.audit = new Audit(cfg.auditDir);
     this.suggestions = new SuggestionStore(cfg.suggestionsDir);
-    for (const d of devices) {
-      const phone: Phone = {
-        cfg: d,
-        adbForWindow: false,
-        adb: new AdbSessions(cfg.adbPath, d.adb.host, (tool, args) => this.relay.dispatch(d.id, tool, args),
-          (why) => { phone.adbForWindow = false; this.audit.record({ kind: "safety", device: d.id, tool: "adb_session_end", why }); },
-          undefined, d.adb.mode === "always" ? d.adb.serial : ""),
-      };
-      this.phones.set(d.id, phone);
-    }
+    for (const d of devices) this.addPhone(d);
+  }
+
+  private addPhone(d: DeviceConfig): void {
+    const phone: Phone = {
+      cfg: d,
+      adbForWindow: false,
+      adb: new AdbSessions(this.cfg.adbPath, d.adb.host, (tool, args) => this.relay.dispatch(d.id, tool, args),
+        (why) => { phone.adbForWindow = false; this.audit.record({ kind: "safety", device: d.id, tool: "adb_session_end", why }); },
+        undefined, d.adb.mode === "always" ? d.adb.serial : ""),
+    };
+    this.phones.set(d.id, phone);
   }
 
   /** The configured phones, in configuration order. */
@@ -93,7 +96,7 @@ export class Core {
   async start(): Promise<void> {
     await this.relay.start();
     this.relay.onEvent((device, event, payload) => this.audit.record({ kind: "event", device, event, payload: redact(payload) }));
-    this.relay.onRequest((device, op) => this.onPhoneRequest(device, op));
+    this.relay.onRequest((device, op, args) => this.onPhoneRequest(device, op, args));
     if ([...this.phones.values()].some((p) => p.cfg.adb.reverse)) {
       void this.keepReverse();
       this.reverseTimer = setInterval(() => void this.keepReverse(), REVERSE_EVERY_MS);
@@ -222,7 +225,8 @@ export class Core {
   }
 
   /** A phone asked the relay something (`req` frame). */
-  private async onPhoneRequest(device: string, op: string): Promise<unknown> {
+  private async onPhoneRequest(device: string, op: string, args: Record<string, unknown> = {}): Promise<unknown> {
+    if (op === "add_device") return this.addDeviceFromPhone(device, args);
     if (op !== "relay_status") throw new Error(`unsupported request '${op}'`);
     const phone = this.phones.get(device);
     if (phone?.cfg.role !== "admin") throw new Error("not_admin: only admin phones can see the relay status");
@@ -234,6 +238,28 @@ export class Core {
       devices: this.status(),
     };
     return status;
+  }
+
+  /**
+   * An admin phone adds another phone: writes its token and devices.json entry and lets it
+   * connect right away (no relay restart). The token goes back to that admin phone only,
+   * once, to be handed to the new phone; the audit log never sees it.
+   */
+  private addDeviceFromPhone(device: string, args: Record<string, unknown>): { id: string; name: string; role: string; token: string } {
+    if (this.phones.get(device)?.cfg.role !== "admin") throw new Error("not_admin: only admin phones can add phones");
+    const file = this.cfg.devicesFile;
+    if (!file || !this.cfg.devices?.length) throw new Error("no_devices_file: this relay runs without a devices file");
+    try {
+      const nd = validateNewDevice(args, this.phones.keys());
+      const added = writeNewDevice(file, nd);
+      this.addPhone(added);
+      this.relay.addToken(added.token, added.id);
+      this.audit.record({ kind: "safety", device, tool: "add_device", ok: true, args: { id: added.id, name: added.name, role: added.role } });
+      return { id: added.id, name: added.name, role: added.role, token: added.token };
+    } catch (err) {
+      this.audit.record({ kind: "safety", device, tool: "add_device", ok: false, error: errorMessage(err) });
+      throw err;
+    }
   }
 
   /** panic_disconnect without a device: every phone. */

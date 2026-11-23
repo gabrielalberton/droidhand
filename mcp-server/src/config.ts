@@ -59,9 +59,11 @@ export interface Config {
    * Without that file: one phone, id "phone", authenticated with `token` and using adbHost/adbSerial.
    */
   devices: DeviceConfig[];
+  /** Where the devices file lives (also when it does not exist yet); add_device writes there. */
+  devicesFile?: string;
 }
 
-const DEVICE_ID = /^[a-z0-9][a-z0-9_-]{0,31}$/;
+export const DEVICE_ID = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 
 function expand(p: string, base: string): string {
   const home = p.startsWith("~/") ? join(homedir(), p.slice(2)) : p;
@@ -139,5 +141,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, withDevices = t
     adbSerial,
     adbHost,
     devices,
+    devicesFile,
   };
 }

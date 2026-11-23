@@ -83,6 +83,11 @@ export class Relay {
     this.wss = null;
   }
 
+  /** Accept a new phone's token from now on (a phone added while the relay runs). */
+  addToken(token: string, device: string): void {
+    if (token) this.byToken.set(token, device);
+  }
+
   /** True while [device] has an authenticated session open. */
   isConnected(device: string): boolean {
     return this.sessions.get(device)?.ws.readyState === WebSocket.OPEN;

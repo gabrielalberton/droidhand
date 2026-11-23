@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { WebSocket, type RawData } from "ws";
@@ -88,15 +88,14 @@ test("panic_disconnect without a device severs every phone", async () => {
 });
 
 /** Send one `req` as a raw phone and return the `res`. */
-async function request(url: string, token: string, op: string): Promise<Record<string, unknown>> {
+async function request(url: string, token: string, op: string, args?: Record<string, unknown>): Promise<Record<string, unknown>> {
   const ws = new WebSocket(url);
   await new Promise((r) => ws.once("open", r));
   const frames: Record<string, unknown>[] = [];
   ws.on("message", (raw: RawData) => frames.push(JSON.parse(raw.toString()) as Record<string, unknown>));
   ws.send(JSON.stringify({ type: "hello", token, device: { suggestionLogging: false, model: "Raw" } }));
   await waitFor(() => frames.some((f) => f.event === "welcome"));
-  assert.deepEqual(frames[0]!.payload, { device: token === "tok-a" ? "a" : "b" });
-  ws.send(JSON.stringify({ type: "req", id: "r1", op }));
+  ws.send(JSON.stringify({ type: "req", id: "r1", op, args }));
   await waitFor(() => frames.some((f) => f.type === "res"));
   ws.close();
   return frames.find((f) => f.type === "res")!;
@@ -119,4 +118,36 @@ test("relay_status: admin phones see every phone, other phones are refused", asy
     const unknown = await request(url, "tok-a", "nope");
     assert.match(String(unknown.error), /unsupported request/);
   });
+});
+
+test("add_device: an admin phone adds a phone, which can connect at once", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "droidhand-add-"));
+  writeFileSync(join(dir, "a.token"), "tok-a\n");
+  writeFileSync(join(dir, "devices.json"), JSON.stringify({ devices: [{ id: "a", tokenFile: "a.token", role: "admin" }, { id: "b", token: "tok-b" }] }));
+  const file = join(dir, "devices.json");
+  const devices = parseDevices(readFileSync(file, "utf8"), dir);
+  const core = new Core({ ...tmpConfig({ token: "control-token", devices }), devicesFile: file });
+  await core.start();
+  try {
+    const url = `ws://127.0.0.1:${core.relay.address()!.port}`;
+    const refused = await request(url, "tok-b", "add_device", { id: "c" });
+    assert.match(String(refused.error), /not_admin/);
+    const taken = await request(url, "tok-a", "add_device", { id: "b" });
+    assert.match(String(taken.error), /id_taken/);
+
+    const res = await request(url, "tok-a", "add_device", { id: "tab", name: "Tablet" });
+    assert.equal(res.ok, true);
+    const d = res.data as { id: string; name: string; role: string; token: string };
+    assert.deepEqual([d.id, d.name, d.role], ["tab", "Tablet", "device"]);
+    assert.match(d.token, /^[0-9a-f]{64}$/);
+    assert.deepEqual(parseDevices(readFileSync(file, "utf8"), dir).map((x) => x.id), ["a", "b", "tab"]);
+    assert.ok(core.devices.some((x) => x.id === "tab"));
+
+    const phone = await startMockPhone({ url, token: d.token, handlers: { tap: () => "from tab" } });
+    await waitFor(() => core.relay.isConnected("tab"));
+    assert.deepEqual(await core.callTool("tap", { device: "tab", x: 1, y: 1 }), { ok: true, data: "from tab" });
+    await phone.close();
+  } finally {
+    await core.stop();
+  }
 });

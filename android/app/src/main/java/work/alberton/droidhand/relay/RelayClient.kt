@@ -50,7 +50,7 @@ class RelayClient(context: Context) {
      * (`ok`, `data` or `error`), or null when not connected or with no answer in
      * [timeoutMs] (a relay older than this feature ignores requests).
      */
-    suspend fun request(op: String, timeoutMs: Long = 5000): JSONObject? {
+    suspend fun request(op: String, args: JSONObject? = null, timeoutMs: Long = 5000): JSONObject? {
         val socket = ws ?: return null
         if (_state.value != State.CONNECTED) return null
         val id = UUID.randomUUID().toString()
@@ -58,7 +58,9 @@ class RelayClient(context: Context) {
             suspendCancellableCoroutine { cont ->
                 requests[id] = { res -> if (cont.isActive) cont.resume(res) }
                 cont.invokeOnCancellation { requests.remove(id) }
-                if (!socket.send(JSONObject().put("type", "req").put("id", id).put("op", op).toString())) {
+                val frame = JSONObject().put("type", "req").put("id", id).put("op", op)
+                if (args != null) frame.put("args", args)
+                if (!socket.send(frame.toString())) {
                     requests.remove(id); cont.resume(null)
                 }
             }

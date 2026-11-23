@@ -103,7 +103,7 @@ private fun App(prefs: Prefs) {
                 Route.HOME -> HomeScreen(prefs, ui, live, relay, onOpen = { route = it }, refresh = { live = readLive(ctx) })
                 Route.CONNECTION -> ConnectionScreen(prefs, relay, back)
                 Route.RELAY -> RelayScreen(relay, back, onAddPhone = { route = Route.ADD_PHONE })
-                Route.ADD_PHONE -> AddPhoneScreen(prefs, onBack = { route = Route.RELAY })
+                Route.ADD_PHONE -> AddPhoneScreen(prefs, relay, onBack = { route = Route.RELAY })
                 Route.BACKGROUND -> BackgroundScreen(prefs, live, back)
                 Route.APPEARANCE -> AppearanceScreen(ui, back)
                 Route.PRIVACY -> PrivacyScreen(prefs, back)

@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -28,7 +29,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import work.alberton.droidhand.R
+import work.alberton.droidhand.ui.Invite
 import work.alberton.droidhand.data.Prefs
 import work.alberton.droidhand.relay.RelayClient
 import work.alberton.droidhand.service.RelayService
@@ -64,7 +67,18 @@ fun ConnectionScreen(prefs: Prefs, relay: RelayClient.State, onBack: () -> Unit)
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 4.dp),
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(12.dp))
+        // Invite made by an admin phone (Relay → Add another phone): fills both fields.
+        OutlinedButton(
+            onClick = {
+                val inv = Invite.fromClipboard(ctx)
+                if (inv == null) Toast.makeText(ctx, R.string.invite_paste_none, Toast.LENGTH_LONG).show()
+                else { url = inv.first; token = inv.second; prefs.relayUrl = url; prefs.token = token
+                    Toast.makeText(ctx, R.string.invite_paste_ok, Toast.LENGTH_SHORT).show() }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(stringResource(R.string.invite_paste)) }
+        Spacer(Modifier.height(16.dp))
         OutlinedTextField(
             value = url,
             onValueChange = { url = it.trim(); prefs.relayUrl = url },
