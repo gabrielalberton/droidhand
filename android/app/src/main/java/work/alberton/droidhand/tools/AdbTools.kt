@@ -11,7 +11,7 @@ class AdbTools : ToolGroup {
     override fun handle(tool: String, args: JSONObject, ctx: ToolContext): ToolResult? {
         if (!tool.startsWith("adb_")) return null
         if (!AdbSession.canWrite(ctx.app)) return ToolResult.fail(
-            "WRITE_SECURE_SETTINGS not granted (adb shell pm grant ${ctx.app.packageName} android.permission.WRITE_SECURE_SETTINGS)")
+            ToolPolicy.NO_WSS)
         return when (tool) {
             "adb_enable" -> {
                 val wifi = args.optBoolean("wifi", false)

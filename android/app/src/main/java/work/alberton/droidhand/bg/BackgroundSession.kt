@@ -91,6 +91,9 @@ class BackgroundSession(
                 onMain { window.show(); bubbles.showMinimize(); raiseStopButton() }
             }
             Mode.NATIVE -> {
+                // The native window is an overlay display, created through a global setting.
+                if (!work.alberton.droidhand.adb.AdbSession.canWrite(ctx)) throw IllegalStateException(
+                    "background window unavailable: " + work.alberton.droidhand.tools.ToolPolicy.NO_WSS)
                 clearStaleOverlay()
                 val before = dm.displays.map { it.displayId }.toSet()
                 // own_content_only: Samsung otherwise puts its DeX launcher and taskbar on the

@@ -70,6 +70,16 @@ class MainScreenGate(private val svc: AccessibilityService) {
         dismiss()
     }
 
+    /**
+     * The agent itself just unlocked the phone (unlock_device, PIN the user saved for
+     * this): nobody else is using it, so do not ask. Lasts like an "Allow": until the
+     * screen turns off or the agent stays idle for [APPROVAL_IDLE_MS].
+     */
+    fun agentUnlocked() {
+        approved = true
+        lastAct = SystemClock.elapsedRealtime()
+    }
+
     private fun userIsUsingPhone(): Boolean {
         val interactive = svc.getSystemService(PowerManager::class.java)?.isInteractive == true
         val locked = svc.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true

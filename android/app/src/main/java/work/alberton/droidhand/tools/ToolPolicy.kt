@@ -67,6 +67,10 @@ object ToolPolicy {
 
     const val NO_SERVICE = "accessibility service not enabled"
 
+    const val NO_WSS = "no_secure_settings: WRITE_SECURE_SETTINGS is not granted. On the phone: DroidHand → " +
+        "Permissions → Secure settings → Pair from the app (or once from a computer: adb shell pm grant " +
+        "work.alberton.droidhand android.permission.WRITE_SECURE_SETTINGS)."
+
     /** True when a Stop tapped at [stopAt] (elapsedRealtime, 0 = none) must still be reported at [now]. */
     fun stopIsFresh(now: Long, stopAt: Long): Boolean = stopAt != 0L && now - stopAt < STOP_NOTICE_MS
 

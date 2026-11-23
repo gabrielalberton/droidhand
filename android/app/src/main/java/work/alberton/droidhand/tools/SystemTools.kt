@@ -29,7 +29,12 @@ class SystemTools(context: Context) : ToolGroup {
             ToolResult.ok(JSONObject().put("cleared", true))
         }
         // Unlock with the user's saved PIN (opt-in in the app).
-        "unlock_device" -> ctx.withService { s -> ToolResult.ok(Unlocker(s).unlock()) }
+        "unlock_device" -> ctx.withService { s ->
+            val r = Unlocker(s).unlock()
+            // Unlocked by the agent (not already unlocked by the user): main-screen work may follow without asking.
+            if (r.optBoolean("unlocked") && !r.optBoolean("alreadyUnlocked")) s.gate.agentUnlocked()
+            ToolResult.ok(r)
+        }
         "get_lock_state" -> ToolResult.ok(lockState(ctx))
         "get_device_info" -> ToolResult.ok(deviceInfo(ctx))
         "list_apps" -> ToolResult.ok(JSONObject().put("apps", launchableApps(ctx.app)))
@@ -102,7 +107,7 @@ class SystemTools(context: Context) : ToolGroup {
             return ToolResult.fail("set_setting allowlist: ${ToolPolicy.WRITABLE.joinToString()} (debugging: use adb_session_begin)")
         }
         if (!canWriteSecure(app)) {
-            return ToolResult.fail("WRITE_SECURE_SETTINGS not granted (adb shell pm grant ${app.packageName} android.permission.WRITE_SECURE_SETTINGS)")
+            return ToolResult.fail(ToolPolicy.NO_WSS)
         }
         val before = readSetting(app, ns, key)
         val ok = when (ns) {

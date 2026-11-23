@@ -124,7 +124,19 @@ test("adb pair: falls back to the next address, grants and arms the TCP port", a
   assert.equal(l.at(-1), "disconnect 192.168.1.9:41000");
 });
 
-test("adb pair: a wrong code stops at once with a clear error", async () => {
+test("adb pair: tries every address at once, so a silent one does not delay the one that answers", async () => {
+  const { adb } = fakeAdb();
+  const slow = adb + "-slow";
+  writeFileSync(slow, `#!/bin/sh\ncase "$*" in "pair 100.64.0.9:37000 "*) sleep 5 ;; esac\nexec "${adb}" "$@"\n`);
+  chmodSync(slow, 0o755);
+  const t0 = Date.now();
+  const r = await pairAndSetUp(slow, { code: "123456", port: 37000, hosts: ["100.64.0.9", "192.168.1.9"], ports: [41000] },
+    { pair: 8000, connect: 500, retry: 10 });
+  assert.equal(r.host, "192.168.1.9");
+  assert.ok(Date.now() - t0 < 4000, "did not wait for the silent address");
+});
+
+test("adb pair: a wrong code fails with a clear error", async () => {
   const { adb } = fakeAdb();
   await assert.rejects(pairAndSetUp(adb, { code: "000000", port: 37000, hosts: ["192.168.1.9", "100.64.0.9"], ports: [] }, fast), /pair_failed/);
   await assert.rejects(pairAndSetUp(adb, { code: "123456", port: 1, hosts: ["10.0.0.1"], ports: [] }, fast), /pair_unreachable/);

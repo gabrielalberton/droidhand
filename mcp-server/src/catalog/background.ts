@@ -9,7 +9,7 @@ export const background: ToolArea = {
     { name: "bg_open", tier: "standard", confirm: false,
       description:
         "Open a background display and return its displayId; then pass display=<id> to launch_app, screen_snapshot, " +
-        "screen_capture, tap, swipe, scroll, type_text, key_event. mode: 'native' (system window, works with debugging OFF, " +
+        "screen_capture, tap, swipe, scroll, type_text, key_event. mode: 'native' (system window, works with debugging OFF but needs the secure-settings permission, " +
         "cannot be hidden), 'own' (our window: hideable, resizable, user can interact; needs own_helper_start, i.e. an ADB session), " +
         "'auto' (default: the own window whenever ADB can be turned on — the relay opens an ADB session just for it and turns " +
         "debugging off at bg_close — else native. Prefer it: the own window never takes the focus from the user's screen, so " +

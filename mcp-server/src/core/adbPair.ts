@@ -17,7 +17,7 @@ const GRANTS = ["android.permission.WRITE_SECURE_SETTINGS", "android.permission.
 export interface PairRequest {
   code: string;
   port: number;
-  /** Addresses to try, in order (tailnet first, then Wi-Fi). */
+  /** Addresses to try (all at once: tailnet, the dialog's and Wi-Fi). */
   hosts: string[];
   /** Ports listening on the phone: one of them is wireless debugging's connect port. */
   ports: number[];
@@ -48,29 +48,47 @@ export function validatePair(args: Record<string, unknown>): PairRequest {
   return { code, port, hosts: [...new Set(hosts)], ports: [...new Set(ports)] };
 }
 
+/**
+ * Pairs over the first address that answers. A refused code only counts once every
+ * address is done: when two addresses reach the same phone, Android drops the second
+ * connection and adb reports that the same way as a wrong code.
+ */
+function pairAny(adb: string, req: PairRequest, timeout: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let left = req.hosts.length;
+    let done = false;
+    let refused = false;
+    let lastErr = "";
+    for (const h of req.hosts) {
+      runFull(adb, ["pair", `${h}:${req.port}`, req.code], timeout).then(
+        (out: AdbOutput) => `${out.stdout}${out.stderr}`,
+        (e: Error) => { lastErr = e.message; return ""; },
+      ).then((text) => {
+        if (done) return;
+        if (/Successfully paired/i.test(text)) { done = true; return resolve(h); }
+        // Real adb says "Failed: Wrong password or connection was dropped." for a bad code.
+        if (/wrong password|protocol fault/i.test(text)) refused = true;
+        else if (text.trim()) lastErr = text.trim();
+        if (--left > 0) return;
+        done = true;
+        reject(new Error(refused
+          ? "pair_failed: Android refused the code (wrong or expired); open the pairing dialog again"
+          : `pair_unreachable: this computer could not reach the phone's pairing port (${lastErr || "no answer"}). ` +
+            "Both must be on the same Wi-Fi or the same tailnet."));
+      });
+    }
+  });
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export interface PairTimings { pair: number; connect: number; retry: number }
 const DEFAULT: PairTimings = { pair: 12_000, connect: 12_000, retry: 1000 };
 
 export async function pairAndSetUp(adb: string, req: PairRequest, t: PairTimings = DEFAULT): Promise<PairResult> {
-  let host: string | null = null;
-  let lastErr = "";
-  for (const h of req.hosts) {
-    const out: AdbOutput | null = await runFull(adb, ["pair", `${h}:${req.port}`, req.code], t.pair).catch((e: Error) => {
-      lastErr = e.message;
-      return null;
-    });
-    const text = `${out?.stdout ?? ""}${out?.stderr ?? ""}`;
-    if (/Successfully paired/i.test(text)) { host = h; break; }
-    // Real adb says "Failed: Wrong password or connection was dropped." for a bad code.
-    if (/wrong password|protocol fault/i.test(text)) {
-      throw new Error("pair_failed: Android refused the code (wrong or expired); open the pairing dialog again");
-    }
-    if (text.trim()) lastErr = text.trim();
-  }
-  if (!host) throw new Error(`pair_unreachable: this computer could not reach the phone's pairing port (${lastErr || "no answer"}). ` +
-    "Both must be on the same Wi-Fi or the same tailnet.");
+  // Every address at once: a phone on someone else's tailnet never answers on its tailnet
+  // IP (node sharing is one-way), and waiting for that timeout first only delays the Wi-Fi.
+  const host = await pairAny(adb, req, t.pair);
 
   // The connect port: try the listening ports the phone reported until adbd answers.
   let serial: string | null = null;

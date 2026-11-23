@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-11-23
+
+Found testing a second phone (Galaxy S24 FE, not rooted, on another tailnet).
+
+### App (Android)
+- After `unlock_device` the agent no longer hits the main-screen prompt right away: an unlock done by the agent counts as approval until the screen turns off or the agent is idle for 3 minutes. Before, a phone unlocked by the agent asked whoever was not holding it, so nothing on the main screen could run.
+- `bg_open` without the secure-settings permission says so (and how to grant it) instead of a raw `SecurityException`. `set_setting` and `adb_session_begin` now point to **Pair from the app** too.
+
+### Relay
+- ADB pairing tries every address at once. A phone on someone else's tailnet never answers on its tailnet IP (node sharing is one-way), so its Wi-Fi address no longer waits 12 s behind it.
+
 ## [1.2.1] - 2026-11-23
 
 ### App (Android)
