@@ -1,4 +1,5 @@
 import { legacyDevice, type Config, type DeviceConfig } from "../config.js";
+import { lockoutError, lockoutReason } from "./lockout.js";
 import { Relay } from "../relay/server.js";
 import { CATALOG_BY_NAME } from "../catalog.js";
 import type { DeviceStatus, RelayStatus } from "../protocol.js";
@@ -303,6 +304,12 @@ export class Core {
     const device = phone.cfg.id;
     const command = String(args.command ?? "");
     this.audit.record({ kind: "cmd", device, tool, tier: "privileged", args: redact({ command }), phase: "request" });
+    const why = lockoutReason(command);
+    if (why) {
+      const error = lockoutError(why);
+      this.audit.record({ kind: "safety", device, tool, ok: false, error });
+      return { ok: false, error };
+    }
     try {
       const secs = typeof args.timeoutSeconds === "number" ? args.timeoutSeconds : 30;
       const out = await phone.adb.shell(command, secs * 1000);

@@ -46,7 +46,7 @@ All 37 tools were run on the S20 on the main screen, the native window and the o
 | Native window | `launch_app`, `screen_capture`, `open_url`, `bg_status`/`bg_show` work; screen tools answer `native_window_not_accessible` (Android 13). `bg_hide` is own-window only |
 | Own window | Everything works, taps as mouse clicks. Keys: back and enter work; home does nothing on Android 13 (now refused); recents opened on the main screen (now refused). Apps open with a caption bar (freeform). After moving the only app out, the window keeps showing its last frame |
 | Fixed during the run | `global_action`/`go_home`/`open_url` with a background display acted on the main screen without asking; a native window left over after an app update made `bg_open` fail; Stop button drawn under the own window; second screenshot within 1 s failed |
-| `panic_disconnect` | Works: the app stops and debugging is turned off even on the `always` test phone, so the phone must be reopened by hand. Run it last |
+| `panic_disconnect` | In this run it stopped the app and turned debugging off even on the `always` test phone, so the phone had to be reopened by hand. Fixed: the agent's panic no longer switches the app off and leaves debugging to the phone's adb mode; the phone reconnects by itself |
 
 ## Other
 

@@ -80,6 +80,12 @@ class DroidHandAccessibilityService : AccessibilityService() {
         toast(R.string.float_action_cancelled)
     }
 
+    /** The agent's panic_disconnect: cancel the running gesture and leave nothing of the agent on screen. */
+    fun agentPanic() {
+        gestures.cancelInFlight()
+        clearAgentUi()
+    }
+
     /** Kill switch: stop the agent session now and keep it off until the operator restarts it. */
     fun stopAgent() {
         clearAgentUi()

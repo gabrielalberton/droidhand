@@ -359,7 +359,7 @@ Mirrors Shizuku's non-root wireless start, but scoped to short, logged windows a
 - **Transport:** Tailscale-only bind + TLS + bearer token; reject non-tailnet peers; optional ACL tag.
 - **Authorization tiers:** standard / privileged / sensitive, enforced server-side *and* app-side (defense in depth).
 - **Confirmation gates:** sensitive + destructive actions need an on-device tap; session-scoped "allow for 10 min" possible but never default-on for money/wipe/credential categories.
-- **Kill switch:** persistent notification "Disconnect" button + Quick Settings tile + `panic_disconnect` tool; killing ends the relay session and any ADB session.
+- **Kill switch:** persistent notification "Disconnect" button + Quick Settings tile; killing ends the relay session and any ADB session and keeps the app off until the user turns it on. The agent's `panic_disconnect` stops its work, ends its ADB session and drops the connection, but the app reconnects: **the agent can turn things off, never in a way it cannot turn back on** (adb_shell refuses commands that would lock it out).
 - **Audit:** append-only JSONL on NUC *and* encrypted local log on phone; secrets redacted; includes actor, args, result, confirmation outcome, latency.
 - **PII mode:** optional redaction of SMS bodies/contacts/notification text in snapshots unless a tool explicitly requests full content (inspired by android-remote-control-mcp).
 - **Idle timeout & rate limits:** auto-disconnect after inactivity; per-tool rate caps.

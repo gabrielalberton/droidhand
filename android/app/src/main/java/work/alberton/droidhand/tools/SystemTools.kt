@@ -11,7 +11,6 @@ import android.provider.Settings
 import org.json.JSONArray
 import org.json.JSONObject
 import work.alberton.droidhand.data.SecretStore
-import work.alberton.droidhand.service.RelayService
 import work.alberton.droidhand.suggestions.SuggestionStore
 import work.alberton.droidhand.unlock.Unlocker
 
@@ -21,9 +20,13 @@ class SystemTools(context: Context) : ToolGroup {
 
     override fun handle(tool: String, args: JSONObject, ctx: ToolContext): ToolResult? = when (tool) {
         // Kill switch (from the server: panic_disconnect).
+        // The agent's own panic: stop what it is doing and clear its UI, but never switch the app
+        // off or touch debugging. The agent must not be able to cut itself off for good: only
+        // the user's kill switches (notification, tile) turn the app off. The relay ends the ADB
+        // session per the phone's adb mode and drops the connection; the app reconnects.
         "panic" -> {
-            ctx.svc?.stopAgent() ?: RelayService.stop(ctx.app)
-            ToolResult.ok(JSONObject().put("stopped", true))
+            ctx.svc?.agentPanic()
+            ToolResult.ok(JSONObject().put("cleared", true))
         }
         // Unlock with the user's saved PIN (opt-in in the app).
         "unlock_device" -> ctx.withService { s -> ToolResult.ok(Unlocker(s).unlock()) }

@@ -8,6 +8,6 @@ export const safety: ToolArea = {
     { name: "get_audit_log", tier: "standard", confirm: false, local: true,
       description: "Return the path to the append-only audit log.", input: {} },
     { name: "panic_disconnect", tier: "standard", confirm: false, local: true,
-      description: "Immediately sever the phone session and any ADB session (debugging is turned off, even on adb mode 'always') and stop the agent service on the phone; it stays off until someone reopens it in the DroidHand app on the phone. Without device: every phone.", input: {} },
+      description: "Stop at once: cancel the running action, close the background window, end the ADB session (debugging off, except on adb mode 'always') and drop the phone's connection; the phone reconnects by itself a few seconds later. It never switches the app off (only the user can, on the phone). Without device: every phone.", input: {} },
   ],
 };

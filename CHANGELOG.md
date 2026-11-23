@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `launch_app` takes `move`: reuse the app's existing task and move it between the background display and the main screen ("continue on the main screen"), instead of opening a separate copy. With the shell helper the exact task is moved back (never the user's own copy) and `bounds` makes it a pop-up window.
 - `launch_app split=true` (experimental, with the shell helper): continue the moved app in split screen next to the user's app. `global_action` gains `split_screen`.
 - New [docs/devices.md](docs/devices.md): what works on which phone (Galaxy S24 Ultra, Galaxy S20).
+- **The agent can no longer lock itself out of a phone.** `panic_disconnect` no longer switches the app off on the phone (it did, and also turned debugging off on an `always` test phone, which then needed someone to reopen it by hand); the phone reconnects by itself. `adb_shell` refuses commands that would leave the agent no way back (`lockout_guard`): stopping, disabling, removing or revoking DroidHand or Tailscale, turning debugging, accessibility or the network off, rebooting. Only the user's kill switches on the phone turn the agent off for good.
 - Tool descriptions: `open_url`, `key_event`, `go_home`, `global_action` and `panic_disconnect` say what they do on a background display and that a panic also stops the app until someone reopens it on the phone.
 
 ### App (Android)

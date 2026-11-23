@@ -79,7 +79,7 @@ Debugging stays off; short, time-limited ADB sessions for privileged work.
 | Tool | What it does | Inputs | Notes |
 | --- | --- | --- | --- |
 | `adb_session_begin` | Turn USB debugging on and connect this computer to the phone over the tailnet (works on mobile data). Debugging is OFF the rest of the time: open a session only when a task really needs adb (e.g. `pm grant`, `pm install`, `dumpsys`) and ALWAYS call adb_session_end as soon as you are done. Fallback only: the session closes by itself 10 minutes after your last tool call (each call renews it), so a lost connection never leaves debugging on. The phone shows a 'Turn ADB off' notification meanwhile. The first session after a reboot needs the phone on any Wi-Fi (error 'adb_not_armed' otherwise). Test phones set to adb mode "always" (see list_devices) only connect: their debugging is never turned off. | `reason` string | privileged · local (host) |
-| `adb_shell` | Run a shell command (as the adb shell user) in the open ADB session. Returns stdout, stderr and exitCode. | `command` string<br>`timeoutSeconds` number 1–300 (optional) | privileged · local (host) |
+| `adb_shell` | Run a shell command (as the adb shell user) in the open ADB session. Returns stdout, stderr and exitCode. Commands that would leave the agent no way back to the phone (stopping, disabling or removing DroidHand or Tailscale, turning debugging, accessibility or the network off, rebooting) are refused with lockout_guard: use adb_session_end to turn debugging off. | `command` string<br>`timeoutSeconds` number 1–300 (optional) | privileged · local (host) |
 | `adb_session_end` | Close the ADB session and turn debugging off on the phone right away (also stops the own-window helper). Call it as soon as the adb work is done. | — | standard · local (host) |
 
 ## Background display
@@ -114,7 +114,7 @@ Audit trail and kill switch.
 | Tool | What it does | Inputs | Notes |
 | --- | --- | --- | --- |
 | `get_audit_log` | Return the path to the append-only audit log. | — | standard · local (host) |
-| `panic_disconnect` | Immediately sever the phone session and any ADB session (debugging is turned off, even on adb mode 'always') and stop the agent service on the phone; it stays off until someone reopens it in the DroidHand app on the phone. Without device: every phone. | — | standard · local (host) |
+| `panic_disconnect` | Stop at once: cancel the running action, close the background window, end the ADB session (debugging off, except on adb mode 'always') and drop the phone's connection; the phone reconnects by itself a few seconds later. It never switches the app off (only the user can, on the phone). Without device: every phone. | — | standard · local (host) |
 
 ## Planned
 

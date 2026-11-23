@@ -148,11 +148,12 @@ System/light/dark theme, English or Portuguese, wallpaper colors or one of five 
 
 ### Kill switches
 
-Any of these stops the agent at once and closes its background window:
+Either of these stops the agent at once, closes its background window, turns debugging off and keeps the app off until you turn it on again:
 
 - **Disconnect** in the DroidHand notification;
-- the **DroidHand** Quick Settings tile (*edit* your quick settings to add it);
-- `panic_disconnect` from the agent side.
+- the **DroidHand** Quick Settings tile (*edit* your quick settings to add it).
+
+The agent's own `panic_disconnect` cancels what it is doing, closes its background window, ends its ADB session and drops the connection, but the app reconnects by itself: nothing the agent can do turns the app off for good.
 
 The small red **Stop** button only cancels the current action; the agent is told and the connection stays up.
 

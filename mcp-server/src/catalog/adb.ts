@@ -17,7 +17,7 @@ export const adb: ToolArea = {
         "only connect: their debugging is never turned off.",
       input: { reason: z.string().describe("why adb is needed, shown in the audit log") } },
     { name: "adb_shell", tier: "privileged", confirm: false, local: true,
-      description: "Run a shell command (as the adb shell user) in the open ADB session. Returns stdout, stderr and exitCode.",
+      description: "Run a shell command (as the adb shell user) in the open ADB session. Returns stdout, stderr and exitCode. Commands that would leave the agent no way back to the phone (stopping, disabling or removing DroidHand or Tailscale, turning debugging, accessibility or the network off, rebooting) are refused with lockout_guard: use adb_session_end to turn debugging off.",
       input: { command: z.string(), timeoutSeconds: z.number().min(1).max(300).optional() } },
     { name: "adb_session_end", tier: "standard", confirm: false, local: true,
       description: "Close the ADB session and turn debugging off on the phone right away (also stops the own-window helper). " +
