@@ -90,6 +90,8 @@ export interface DeviceStatus {
   androidSdk?: number;
   appVersion?: string;
   adb: { mode: "on-demand" | "always"; sessionOpen: boolean };
+  /** What an agent must do differently on this phone (from model + SDK; see core/deviceRules.ts). */
+  rules?: { id: string; rule: string; basis: string }[];
 }
 
 /** Answer to `relay_status` (admin phones only). */

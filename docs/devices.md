@@ -22,13 +22,18 @@ was seen, when, and how. "Untested" means nobody tried it yet, not that it fails
 
 ## Moving an app between the screens (`launch_app move=true`)
 
-The background display has the phone screen's size and density by default, so the moved
-app usually keeps running instead of being recreated.
+Whether the moved app keeps running depends on the Android version, not on the window size.
+Background displays (native and own) tell apps they have no touchscreen; the main screen has one.
+Android 13 restarts the activity when that changes, newer Android does not. A taller display that
+gives the app exactly the phone's size (tested 2026-11-23) does not change this.
+
+The relay turns this table into `rules` in `list_devices` and `get_device_info`
+(`mcp-server/src/core/deviceRules.ts`). Versions nobody tested get the cautious rule.
 
 | Feature | S24 Ultra | S20 |
 |---|---|---|
 | Main screen → background (same copy, not a new one) | Yes, not recreated (Calculator, 2026-11-21) | Yes. Native window: not recreated. Own window: recreated (touchscreen setting differs), Clock kept its running stopwatch |
-| Background → main screen | Yes, not recreated (Calculator) | Yes |
+| Background → main screen | Yes, not recreated (Calculator; Settings and Calendar with and without a band, 2026-11-23) | Yes, but **recreated**: 6 of 6 apps (Settings, Clock, Calendar, My Files, Messages, Contacts), native and own window, with and without a band (2026-11-23). Text in a plain field survived; web forms would not |
 | Background → main when the app is also open on the main screen | Untested | Without the helper Android picks the main-screen copy (wrong one). With the helper the exact task is moved (2026-11-22) |
 | Background → main as a pop-up window (`bounds`) | Untested | With the helper: yes, not recreated. Without it: no (bounds ignored, app recreated) |
 | Background → split screen (`split=true`, experimental, needs the helper) | Untested | Yes: the exact task goes to the top half, recreated (own window) but the stopwatch kept its state. The accessibility "toggle split screen" action fails on One UI 5, and an intent with LAUNCH_ADJACENT always opens a new copy. One UI pulls older copies of the same app into the bottom half; the helper puts the user's app back on top (fixed 2026-11-22). Known issue: the bottom half may get the wrong app when the user's top task is translucent |

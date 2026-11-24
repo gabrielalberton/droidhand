@@ -12,8 +12,7 @@ export const apps: ToolArea = {
         "move=true reuses the app's existing task instead and moves it: with display=<id> it takes the user's copy to the background display " +
         "(only when the user asked: it leaves their screen); with display=0 it brings the copy from the background display to the main screen " +
         "('continue on the main screen', e.g. for the user to take over). With the shell helper running (own_helper_start) the exact task from the background display is moved and bounds turn it into a pop-up window; without it Android may pick the user's own copy if the app is also open on the main screen, and bounds are ignored. " +
-        "The background display has the phone screen's size by default, so a moved app keeps its state instead of being recreated. " +
-        "What works differs per phone: see docs/devices.md.",
+        "Whether a moved app keeps its state or is recreated (losing web forms) depends on the phone: read the 'rules' from list_devices or get_device_info first.",
       input: { package: z.string(), bounds: z.array(z.number()).length(4).optional(), move: z.boolean().optional(),
         split: z.boolean().optional().describe("experimental, with move=true display=0 and the shell helper: put the moved app in split screen next to the user's app") } },
     { name: "open_url", tier: "standard", confirm: false,

@@ -17,7 +17,8 @@ export const background: ToolArea = {
         "Only while the phone is unlocked (Android pauses background apps behind the lock screen: unlock_device first). " +
         "Safety: work in the background only happens while the user can see it (stop button + window, eye bubble or handle). " +
         "If those cannot be shown, the session is closed and calls fail with 'indicators_not_visible' — do not retry in a loop. " +
-        "width/height/dpi default to the phone screen's, so apps can move between the screens (launch_app move=true) without being recreated.",
+        "width/height/dpi default to the phone screen's. What works here differs per phone (native window readable or not, apps recreated when moved): " +
+        "follow the 'rules' from list_devices or get_device_info.",
       input: { mode: z.enum(["auto", "native", "own"]).optional(), width: z.number().optional(),
         height: z.number().optional(), dpi: z.number().optional() } },
     { name: "bg_status", tier: "standard", confirm: false,

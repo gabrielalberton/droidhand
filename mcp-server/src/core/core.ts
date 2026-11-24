@@ -13,6 +13,7 @@ import { pairAndSetUp, validatePair, type PairResult } from "./adbPair.js";
 import { SetupLinks } from "./setupLinks.js";
 import { appLink, pickLang, renderGonePage, renderSetupPage } from "../relay/setupPage.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { deviceRules } from "./deviceRules.js";
 
 /** Outcome of one tool call, as returned to the MCP adapter over the control channel. */
 export interface ToolResult {
@@ -136,6 +137,7 @@ export class Core {
         ...(s?.info.androidSdk ? { androidSdk: s.info.androidSdk } : {}),
         ...(s?.info.appVersion ? { appVersion: s.info.appVersion } : {}),
         adb: { mode: cfg.adb.mode, sessionOpen: adb.active },
+        ...(s ? { rules: deviceRules(s.info.model, s.info.androidSdk) } : {}),
       };
     });
   }
@@ -207,6 +209,11 @@ export class Core {
         // The ADB session was opened only for the own window: debugging goes off with it.
         phone.adbForWindow = false;
         await phone.adb.end("window_closed");
+      }
+      if (name === "get_device_info" && data && typeof data === "object") {
+        const d = data as { model?: unknown; androidSdk?: unknown };
+        const rules = deviceRules(typeof d.model === "string" ? d.model : undefined, typeof d.androidSdk === "number" ? d.androidSdk : undefined);
+        return { ok: true, data: { ...d, rules } };
       }
       return { ok: true, data };
     } catch (err) {

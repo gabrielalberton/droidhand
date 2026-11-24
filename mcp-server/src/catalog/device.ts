@@ -7,10 +7,11 @@ export const device: ToolArea = {
   summary: "Device info and system settings.",
   tools: [
     { name: "list_devices", tier: "standard", confirm: false, local: true,
-      description: "The phones this relay knows, with id, name, connected or not, model, app version and adb mode. " +
+      description: "The phones this relay knows, with id, name, connected or not, model, app version, adb mode and 'rules' " +
+        "(what to do differently on that phone, from its model and Android version; read them before using background windows). " +
         "When more than one phone is connected, pass device=<id> to every other tool.", input: {} },
     { name: "get_device_info", tier: "standard", confirm: false,
-      description: "Model, Android version, battery, network.", input: {} },
+      description: "Model, Android version, battery, network, and the 'rules' for this phone (same as in list_devices).", input: {} },
     { name: "get_setting", tier: "standard", confirm: false,
       description: "Read a system setting.",
       input: { namespace: settingNamespace, key: z.string() } },
