@@ -7,7 +7,7 @@ import type { DeviceStatus, RelayStatus } from "../protocol.js";
 import { VERSION } from "../version.js";
 import { Audit, redact } from "./audit.js";
 import { SuggestionStore, isSuggestionCategory } from "./suggestions.js";
-import { run, startShellHelper, stopShellHelper } from "./adb.js";
+import { run, runPinUnlock, startShellHelper, stopShellHelper } from "./adb.js";
 import { AdbSessions } from "./adbSession.js";
 import { pairAndSetUp, validatePair, type PairResult } from "./adbPair.js";
 import { SetupLinks } from "./setupLinks.js";
@@ -47,6 +47,7 @@ interface Phone {
   readonly adb: AdbSessions;
   /** True while the open ADB session exists only for the own window (closed with it). */
   adbForWindow: boolean;
+  unlockInProgress?: boolean;
 }
 
 /**
@@ -203,7 +204,7 @@ export class Core {
       phase: "request",
     });
     try {
-      const data = await this.relay.dispatch(id, name, args);
+      const data = name === "unlock_device" ? await this.unlockDevice(phone) : await this.relay.dispatch(id, name, args);
       this.audit.record({ kind: "cmd", device: id, tool: name, ok: true });
       if (name === "bg_close" && phone.adbForWindow) {
         // The ADB session was opened only for the own window: debugging goes off with it.
@@ -220,6 +221,37 @@ export class Core {
       const error = errorMessage(err);
       this.audit.record({ kind: "cmd", device: id, tool: name, ok: false, error });
       return { ok: false, error };
+    }
+  }
+
+  private async unlockDevice(phone: Phone): Promise<unknown> {
+    const id = phone.cfg.id;
+    try {
+      return await this.relay.dispatch(id, "unlock_device", {});
+    } catch (err) {
+      if (errorMessage(err) !== "accessibility service not enabled") throw err;
+    }
+    const state = (await this.relay.dispatch(id, "get_lock_state", {})) as { locked?: boolean; adbPinUnlockAvailable?: boolean };
+    if (state.locked === false) return { unlocked: true, alreadyUnlocked: true };
+    if (state.adbPinUnlockAvailable !== true) throw new Error("accessibility service not enabled; ADB PIN unlock is unavailable or has not been accepted on the phone");
+    if (phone.unlockInProgress) throw new Error("An ADB unlock is already in progress");
+    phone.unlockInProgress = true;
+    const hadSession = phone.adb.active;
+    try {
+      if (!hadSession) await phone.adb.begin();
+      const prepared = (await this.relay.dispatch(id, "adb_pin_unlock_prepare", {})) as { challenge?: unknown };
+      if (typeof prepared.challenge !== "string" || !/^[0-9a-f]{64}$/.test(prepared.challenge)) throw new Error("Could not prepare ADB PIN unlock");
+      const result = await runPinUnlock(this.cfg.adbPath, await phone.adb.ready(), prepared.challenge);
+      if (result === "unlocked" || result === "already_unlocked") return { unlocked: true, alreadyUnlocked: result === "already_unlocked", via: "adb" };
+      if (result === "attempt_failed") throw new Error("ADB PIN unlock failed; automatic PIN unlock has been disabled on the phone");
+      if (result === "numeric_pin_required") throw new Error("ADB unlock requires a numeric PIN saved on the phone");
+      throw new Error("ADB unlock could not verify an empty, focused system PIN pad; unlock the phone manually");
+    } finally {
+      try {
+        if (!hadSession) await phone.adb.end("unlock_finished");
+      } finally {
+        phone.unlockInProgress = false;
+      }
     }
   }
 

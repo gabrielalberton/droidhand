@@ -10,15 +10,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -81,11 +86,40 @@ fun UnlockSection(prefs: Prefs) {
     val store = remember { work.alberton.droidhand.data.SecretStore(ctx) }
     val cs = MaterialTheme.colorScheme
     var enabled by remember { mutableStateOf(prefs.pinUnlockEnabled) }
+    var adbEnabled by remember { mutableStateOf(prefs.adbPinUnlockEnabled) }
+    var confirmAdb by remember { mutableStateOf(false) }
+    var useAdb by remember { mutableStateOf(true) }
+    val adbSupported = android.os.Build.VERSION.SDK_INT >= 34
     var hasPin by remember { mutableStateOf(store.hasPin) }
     var pin by remember { mutableStateOf("") }          // what is in the field
     var revealed by remember { mutableStateOf(false) }  // saved PIN loaded into the field
     var show by remember { mutableStateOf(false) }
     val authTitle = stringResource(R.string.unlock_auth_title)
+
+    if (confirmAdb) AlertDialog(
+        onDismissRequest = { confirmAdb = false },
+        title = { Text(stringResource(R.string.unlock_adb_title)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(stringResource(R.string.unlock_adb_warning))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = useAdb, onCheckedChange = { useAdb = it })
+                    Text(stringResource(R.string.unlock_adb_enable))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                confirmAdb = false
+                val a = activity ?: return@TextButton
+                confirmUser(a, authTitle) {
+                    enabled = true; prefs.pinUnlockEnabled = true
+                    adbEnabled = useAdb; prefs.adbPinUnlockEnabled = useAdb
+                }
+            }) { Text(stringResource(R.string.unlock_adb_confirm)) }
+        },
+        dismissButton = { TextButton(onClick = { confirmAdb = false }) { Text(stringResource(android.R.string.cancel)) } },
+    )
 
     // While a PIN is visible, block screenshots and screen capture (including the agent's).
     DisposableEffect(show) {
@@ -149,6 +183,7 @@ fun UnlockSection(prefs: Prefs) {
                     androidx.compose.material3.TextButton(onClick = {
                         store.pin = null; hasPin = false; pin = ""; revealed = false; show = false
                         enabled = false; prefs.pinUnlockEnabled = false
+                        adbEnabled = false; prefs.adbPinUnlockEnabled = false
                     }) { Text(stringResource(R.string.unlock_remove), color = cs.error) }
                 }
             }
@@ -161,10 +196,20 @@ fun UnlockSection(prefs: Prefs) {
                 enabled = hasPin,
                 onCheckedChange = { on ->
                     if (!on) { enabled = false; prefs.pinUnlockEnabled = false; return@Switch }
+                    if (adbSupported) { useAdb = true; confirmAdb = true; return@Switch }
                     val a = activity ?: return@Switch
                     confirmUser(a, authTitle) { enabled = true; prefs.pinUnlockEnabled = true }
                 },
             )
+        }
+        if (adbSupported) {
+            RowDivider()
+            SettingRow(R.drawable.ic_key, stringResource(R.string.unlock_adb_enable), stringResource(R.string.unlock_adb_description)) {
+                Switch(checked = adbEnabled && enabled, enabled = enabled, onCheckedChange = { on ->
+                    if (on) { useAdb = true; confirmAdb = true }
+                    else { adbEnabled = false; prefs.adbPinUnlockEnabled = false }
+                })
+            }
         }
     }
     Spacer(Modifier.height(8.dp))

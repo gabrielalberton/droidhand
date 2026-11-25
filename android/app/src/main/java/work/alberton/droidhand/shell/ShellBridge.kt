@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.os.Process
 import android.util.Log
+import work.alberton.droidhand.unlock.AdbPinUnlock
 
 /** App-side end of the shell helper link. */
 object ShellBridge {
@@ -43,6 +44,12 @@ class ShellBridgeProvider : ContentProvider() {
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
         val uid = Binder.getCallingUid()
         if (uid != Process.SHELL_UID && uid != Process.ROOT_UID) throw SecurityException("shell only")
+        if (method == "unlock") {
+            val helper = extras?.getBinder("helper") ?: return null
+            val challenge = arg ?: return null
+            val result = AdbPinUnlock.complete(requireNotNull(context), challenge, IShellUnlockInput.Stub.asInterface(helper))
+            return Bundle().apply { putString("result", result) }
+        }
         if (method != "attach") return null
         val binder = extras?.getBinder("helper") ?: throw IllegalArgumentException("missing helper binder")
         ShellBridge.attach(binder)

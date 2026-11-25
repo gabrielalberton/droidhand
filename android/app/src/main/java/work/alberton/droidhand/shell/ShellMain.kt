@@ -72,8 +72,15 @@ object ShellMain {
     @JvmStatic
     fun main(args: Array<String>) {
         Looper.prepareMainLooper()
+        if (args.contentEquals(arrayOf("unlock"))) {
+            val challenge = readlnOrNull()?.takeIf { it.matches(Regex("[0-9a-f]{64}")) } ?: error("missing challenge")
+            val input = ShellUnlockInput()
+            val result = callApp("unlock", challenge, input.asBinder())?.getString("result") ?: "rejected"
+            println(result)
+            return
+        }
         dm = displayManager()
-        val appToken = attachToApp()
+        val appToken = callApp("attach", null, helper.asBinder())?.getBinder("app") ?: error("app did not return a token")
         appToken.linkToDeath({
             Log.i(TAG, "app died; releasing displays")
             shutdown()
@@ -323,7 +330,7 @@ object ShellMain {
 
     // ---- Hand our binder to the app through its content provider ----
     @SuppressLint("PrivateApi")
-    private fun attachToApp(): IBinder {
+    private fun callApp(method: String, arg: String?, helper: IBinder): Bundle? {
         val am = Class.forName("android.app.ActivityManager").getMethod("getService").invoke(null)!!
         val token = Binder()
         val getExt = am.javaClass.methods.first { it.name == "getContentProviderExternal" && it.parameterTypes.size == 4 }
@@ -334,12 +341,13 @@ object ShellMain {
             it.name == "call" && it.parameterTypes.size == 5 && it.parameterTypes[0] == AttributionSource::class.java
         }
         val attribution = AttributionSource.Builder(Process.SHELL_UID).setPackageName(SHELL_PKG).build()
-        val reply = call.invoke(provider, attribution, AUTHORITY, "attach", null,
-            Bundle().apply { putBinder("helper", helper.asBinder()) }) as Bundle?
-        runCatching {
-            am.javaClass.methods.first { it.name == "removeContentProviderExternalAsUser" }
-                .invoke(am, AUTHORITY, token, 0)
+        return try {
+            call.invoke(provider, attribution, AUTHORITY, method, arg, Bundle().apply { putBinder("helper", helper) }) as Bundle?
+        } finally {
+            runCatching {
+                am.javaClass.methods.first { it.name == "removeContentProviderExternalAsUser" }
+                    .invoke(am, AUTHORITY, token, 0)
+            }
         }
-        return reply?.getBinder("app") ?: error("app did not return a token")
     }
 }

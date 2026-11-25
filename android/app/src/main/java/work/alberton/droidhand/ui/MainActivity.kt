@@ -33,7 +33,9 @@ import work.alberton.droidhand.data.Prefs
 import work.alberton.droidhand.relay.RelayClient
 import work.alberton.droidhand.service.RelayService
 import work.alberton.droidhand.shell.ShellBridge
+import work.alberton.droidhand.adb.AdbSession
 import work.alberton.droidhand.ui.home.HomeScreen
+import work.alberton.droidhand.ui.home.UpdateModel
 import work.alberton.droidhand.ui.settings.AppearanceScreen
 import work.alberton.droidhand.ui.settings.BackgroundScreen
 import work.alberton.droidhand.ui.settings.ConnectionScreen
@@ -71,7 +73,8 @@ private val pendingInvite = mutableStateOf<Invite.Data?>(null)
 
 private fun readLive(ctx: Context): Live {
     val bg = bgSession()
-    return Live(PermissionState.read(ctx), bg?.mode, bg?.displayId ?: -1, ShellBridge.attached)
+    val adbOn = runCatching { android.provider.Settings.Global.getInt(ctx.contentResolver, android.provider.Settings.Global.ADB_ENABLED, 0) == 1 }.getOrDefault(false)
+    return Live(PermissionState.read(ctx), bg?.mode, bg?.displayId ?: -1, ShellBridge.attached, adbOn, AdbSession.deadline(ctx))
 }
 
 @Composable
@@ -81,6 +84,7 @@ private fun App(prefs: Prefs) {
     var route by rememberSaveable { mutableStateOf(Route.HOME) }
     var live by remember { mutableStateOf(readLive(ctx)) }
     val relay by RelayClient.state.collectAsState()
+    val updates = remember { UpdateModel(ctx) }
 
     // Permissions and background state change outside the app: refresh while visible.
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -88,6 +92,10 @@ private fun App(prefs: Prefs) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (true) { live = readLive(ctx); delay(1500) }
         }
+    }
+    // Look for a new version every time the app comes to the front (at most once a minute), not only on a cold start.
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { updates.check(manual = false) }
     }
 
     DroidHandTheme(ui.theme, ui.dynamic, ui.accent) {
@@ -139,7 +147,7 @@ private fun App(prefs: Prefs) {
         ) { r ->
             val back = { route = Route.HOME }
             when (r) {
-                Route.HOME -> HomeScreen(prefs, ui, live, relay, onOpen = { route = it }, refresh = { live = readLive(ctx) })
+                Route.HOME -> HomeScreen(prefs, ui, live, relay, updates, onOpen = { route = it }, refresh = { live = readLive(ctx) })
                 Route.CONNECTION -> ConnectionScreen(prefs, relay, back)
                 Route.RELAY -> RelayScreen(relay, back, onAddPhone = { route = Route.ADD_PHONE })
                 Route.ADD_PHONE -> AddPhoneScreen(prefs, relay, onBack = { route = Route.RELAY })

@@ -31,7 +31,8 @@ export const lock: ToolArea = {
       description: "Screen on/off, locked, secure lock, and whether PIN unlock by the agent is enabled.", input: {} },
     { name: "unlock_device", tier: "privileged", confirm: false,
       description: "Unlock the phone with the PIN the user saved in the DroidHand app (opt-in, off by default; the PIN never leaves the phone). " +
-        "Wakes the screen, opens the PIN pad and enters it. One wrong attempt disables the feature. Only when the task needs the main screen.",
+        "Wakes the screen, opens the PIN pad and enters it. If accessibility is off, uses ADB on Android 14+ when the user has accepted the ADB option. " +
+        "One wrong attempt disables the feature. Only when the task needs the main screen.",
       input: {} },
   ],
 };

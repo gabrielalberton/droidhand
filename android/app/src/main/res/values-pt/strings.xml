@@ -121,6 +121,11 @@
     <string name="unlock_enable_desc">Usa o PIN salvo na tela de bloqueio. Uma tentativa errada desliga isto automaticamente.</string>
     <string name="unlock_auth_title">Confirme que é você</string>
     <string name="unlock_disclaimer">Isenção de responsabilidade: este recurso é fornecido no estado em que se encontra, sem garantia de qualquer tipo. A decisão de ativá-lo é exclusivamente sua, e você é o único responsável por qualquer acesso, perda ou dano decorrente. Os autores e colaboradores do DroidHand não se responsabilizam. O PIN fica cifrado neste celular (Android Keystore) e nunca é enviado ao agente nem ao relay.</string>
+    <string name="unlock_adb_title">Desbloquear com um computador pareado por ADB</string>
+    <string name="unlock_adb_enable">Permitir desbloqueio com PIN via ADB</string>
+    <string name="unlock_adb_description">Permite ao agente desbloquear o celular mesmo com o serviço de acessibilidade do DroidHand desligado.</string>
+    <string name="unlock_adb_confirm">Continuar para a verificação do aparelho</string>
+    <string name="unlock_adb_warning">O agente pode desbloquear o celular sem você estar presente. O PIN salvo fica cifrado neste celular e não é enviado ao relay, mas um processo local do ADB recebe os dígitos durante o desbloqueio. Autorize a depuração apenas em computadores de sua confiança e proteja o acesso ao agente e ao relay. Nas opções do desenvolvedor do Android, revogue autorizações de depuração que você não reconhece. Encerre o ADB após o uso e desligue esta opção se perder o controle de um computador pareado. O uso é opcional e por sua conta e risco. O recurso é fornecido no estado em que se encontra, sem garantias, nos limites da lei.</string>
     <string name="back">Voltar</string>
 
     <string name="float_hide">Esconder</string>
@@ -255,4 +260,17 @@
     <string name="invite_setup_gone">Este link de configuração não vale mais, ou o computador está fora de alcance (o Tailscale está ligado?).</string>
     <string name="pair_open_connection">Abrir Conexão</string>
     <string name="status_connecting_slow">Não está alcançando o computador. O Tailscale está ligado, na mesma tailnet do computador (ou com o computador compartilhado com a sua)?</string>
+    <string name="section_quick">Controles rápidos</string>
+    <string name="quick_a11y">Serviço de acessibilidade</string>
+    <string name="quick_a11y_on">Ligado: o agente lê a tela e toca.</string>
+    <string name="quick_a11y_off">Desligado. Alguns apps, como os de banco, podem se recusar a abrir com ele ligado.</string>
+    <string name="quick_a11y_manual">Ligue ou desligue o DroidHand na próxima tela. Conceda as configurações seguras para alternar aqui.</string>
+    <string name="quick_adb">Depuração USB (ADB)</string>
+    <string name="quick_adb_on">Ligada</string>
+    <string name="quick_adb_until">Ligada até %1$s; depois desliga sozinha.</string>
+    <string name="quick_adb_off">Desligada. Ligue por 10 minutos quando o agente precisar do ADB.</string>
+    <string name="update_check">Procurar atualização</string>
+    <string name="update_found">Versão %1$s disponível</string>
+    <string name="update_none">Você está na versão mais recente (%1$s)</string>
+    <string name="update_check_failed">Não deu para verificar. Tente de novo daqui a pouco.</string>
 </resources>

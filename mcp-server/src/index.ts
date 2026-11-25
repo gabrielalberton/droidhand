@@ -19,7 +19,7 @@ async function main(): Promise<void> {
   const server = createMcpServer({
     // ADB sessions may arm adb over the network (tens of seconds); everything else answers fast.
     call: (tool, args) => control.call(tool, pinned && args.device === undefined ? { ...args, device: pinned } : args,
-      /^(adb_|own_helper_)/.test(tool) ? 120_000 : undefined),
+      /^(adb_|own_helper_)/.test(tool) || tool === "unlock_device" ? 120_000 : undefined),
     unreachableMessage: `relay daemon unreachable at ${cfg.controlHost}:${cfg.controlPort} (is droidhand-relay running?)`,
   });
   await server.connect(new StdioServerTransport());

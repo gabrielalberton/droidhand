@@ -70,7 +70,7 @@ Lock state and opt-in PIN unlock (the PIN never leaves the phone).
 | Tool | What it does | Inputs | Notes |
 | --- | --- | --- | --- |
 | `get_lock_state` | Screen on/off, locked, secure lock, and whether PIN unlock by the agent is enabled. | — | standard |
-| `unlock_device` | Unlock the phone with the PIN the user saved in the DroidHand app (opt-in, off by default; the PIN never leaves the phone). Wakes the screen, opens the PIN pad and enters it. One wrong attempt disables the feature. Only when the task needs the main screen. | — | privileged |
+| `unlock_device` | Unlock the phone with the PIN the user saved in the DroidHand app (opt-in, off by default; the PIN never leaves the phone). Wakes the screen, opens the PIN pad and enters it. If accessibility is off, uses ADB on Android 14+ when the user has accepted the ADB option. One wrong attempt disables the feature. Only when the task needs the main screen. | — | privileged |
 
 ## ADB on demand
 

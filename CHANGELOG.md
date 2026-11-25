@@ -4,7 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.2.5] - 2026-11-25
+
 ### App (Android)
+- **Quick controls on the home screen**: two switches, one for the accessibility service and one for USB debugging. With the secure-settings grant the accessibility switch flips right there (without it, it opens Android's screen); the debugging switch turns ADB on for 10 minutes ("On until HH:mm") and off again by itself. Handy for apps that refuse to open while accessibility is on.
+- **Check for updates button** in the header, with the outcome as a toast. The app also looks for a new version every time it comes to the front (at most once a minute) and remembers the last release it found, so the update card shows at once instead of after the network answers.
+- **Optional ADB fallback for PIN unlock** (Android 14+): with accessibility off, `unlock_device` can type the saved PIN through a phone-side helper started over ADB. It needs its own acknowledgement in *Privacy & safety*; the relay never sees the PIN.
 - **PIN unlock could spend wrong attempts** (seen on a Galaxy S24 FE, One UI 8): the PIN field was read from a stale accessibility cache, so a digit that had registered looked missing, the key was tapped again, and One UI checked the too-long PIN by itself. The field is now read fresh, a key gets at most one extra tap, and if the field empties by itself (the lock screen checked it) automatic unlock turns off at once. Leftover digits are cleared (with real taps, checked) before typing.
 - Background windows refuse with `phone_locked` while the phone is locked: Android pauses their apps behind the lock screen, so they stayed black while the tools reported success.
 

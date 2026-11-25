@@ -127,6 +127,11 @@
     <string name="unlock_enable_desc">Uses the saved PIN on the lock screen. One wrong attempt turns this off automatically.</string>
     <string name="unlock_auth_title">Confirm it\'s you</string>
     <string name="unlock_disclaimer">Disclaimer: this feature is provided as is, without warranty of any kind. You alone decide to enable it and are solely responsible for any access, loss or damage that results. The DroidHand authors and contributors are not liable. The PIN stays encrypted on this phone (Android Keystore) and is never sent to the agent or the relay.</string>
+    <string name="unlock_adb_title">Unlock with a paired ADB computer</string>
+    <string name="unlock_adb_enable">Allow PIN unlock over ADB</string>
+    <string name="unlock_adb_description">Allows the agent to unlock the phone when the DroidHand accessibility service is off.</string>
+    <string name="unlock_adb_confirm">Continue to device verification</string>
+    <string name="unlock_adb_warning">The agent can unlock your phone without you present. The saved PIN is encrypted on this phone and is not sent to the relay, but a local ADB helper handles the digits during unlock. Treat every computer allowed to debug this phone, and anyone who can control your agent or relay, as trusted with access to the phone. Revoke unfamiliar debugging authorizations in Android developer options, close ADB sessions when done, and turn off this option immediately if you lose control of a paired computer. Use is optional and at your own risk. This feature is provided as is, without warranty, to the extent permitted by law.</string>
     <string name="back">Back</string>
 
     <!-- Floating controls -->
@@ -262,4 +267,17 @@
     <string name="invite_setup_gone">This setup link is no longer valid, or the computer cannot be reached (is Tailscale on?).</string>
     <string name="pair_open_connection">Open Connection</string>
     <string name="status_connecting_slow">Not reaching the computer. Is Tailscale on, on the same tailnet as the computer (or the computer shared with yours)?</string>
+    <string name="section_quick">Quick controls</string>
+    <string name="quick_a11y">Accessibility service</string>
+    <string name="quick_a11y_on">On: the agent can read the screen and tap.</string>
+    <string name="quick_a11y_off">Off. Some apps, such as banks, may refuse to open while it is on.</string>
+    <string name="quick_a11y_manual">Turn DroidHand on or off on the next screen. Grant secure settings to flip it here.</string>
+    <string name="quick_adb">USB debugging (ADB)</string>
+    <string name="quick_adb_on">On</string>
+    <string name="quick_adb_until">On until %1$s, then it turns itself off.</string>
+    <string name="quick_adb_off">Off. Turn on for 10 minutes when the agent needs ADB.</string>
+    <string name="update_check">Check for updates</string>
+    <string name="update_found">Version %1$s is out</string>
+    <string name="update_none">You are on the latest version (%1$s)</string>
+    <string name="update_check_failed">Could not check for updates. Try again in a moment.</string>
 </resources>

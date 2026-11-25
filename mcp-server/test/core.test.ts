@@ -33,6 +33,26 @@ test("forwards a tool call to the phone and returns its result", async () => {
   });
 });
 
+test("unlock never opens ADB before the phone confirms ADB PIN unlock is enabled", async () => {
+  const cfg = tmpCfg();
+  await withCore(cfg, async (core, url) => {
+    let adbRequested = false;
+    const phone = await startMockPhone({ url, token: cfg.token, handlers: {
+      unlock_device: () => { throw "accessibility service not enabled"; },
+      get_lock_state: () => ({ locked: true, adbPinUnlockAvailable: false }),
+      adb_enable: () => { adbRequested = true; return {}; },
+    } });
+    try {
+      const result = await core.callTool("unlock_device", {});
+      assert.equal(result.ok, false);
+      assert.match(result.error ?? "", /has not been accepted/);
+      assert.equal(adbRequested, false);
+    } finally {
+      await phone.close();
+    }
+  });
+});
+
 test("suggest_feature is rejected when device logging is OFF (default)", async () => {
   const cfg = tmpCfg();
   await withCore(cfg, async (core, url) => {

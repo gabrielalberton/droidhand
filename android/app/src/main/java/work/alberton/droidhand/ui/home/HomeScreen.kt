@@ -44,14 +44,18 @@ fun HomeScreen(
     ui: UiSettings,
     live: Live,
     relay: State,
+    updates: UpdateModel,
     onOpen: (Route) -> Unit,
     refresh: () -> Unit,
 ) {
     Page(title = null, onBack = null) {
-        Header()
+        Header(updates)
         Spacer(Modifier.height(24.dp))
         StatusCard(prefs, live, relay, onOpen)
-        UpdateCard()
+        UpdateCard(updates)
+
+        SectionLabel(stringResource(R.string.section_quick))
+        QuickControls(live, refresh, onPair = { onOpen(Route.PAIR_ADB) })
 
         val p = live.perms
         SectionLabel(
@@ -109,7 +113,7 @@ private fun appearanceSummary(ui: UiSettings): String {
 
 
 @Composable
-private fun Header() {
+private fun Header(updates: UpdateModel) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp)) {
         Box(
             Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF1F2130)),
@@ -126,5 +130,7 @@ private fun Header() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Spacer(Modifier.weight(1f))
+        UpdateButton(updates)
     }
 }

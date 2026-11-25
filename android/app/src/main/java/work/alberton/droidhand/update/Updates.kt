@@ -42,18 +42,28 @@ object Updates {
         return false
     }
 
+    /** Outcome of a check: a newer release, nothing newer, or no answer (offline, GitHub rate limit). */
+    sealed interface Check {
+        data class Available(val release: Release) : Check
+        data object UpToDate : Check
+        data object Failed : Check
+    }
+
     /** The latest release when it is newer than this app, else null. Network errors also give null. */
-    suspend fun check(): Release? = withContext(Dispatchers.IO) {
+    suspend fun check(): Release? = (checkNow() as? Check.Available)?.release
+
+    suspend fun checkNow(): Check = withContext(Dispatchers.IO) {
         runCatching {
             val req = Request.Builder().url("https://api.github.com/repos/$REPO/releases/latest")
                 .header("Accept", "application/vnd.github+json").build()
-            val json = http.newCall(req).execute().use { r -> if (!r.isSuccessful) return@runCatching null; JSONObject(r.body!!.string()) }
+            val json = http.newCall(req).execute().use { r -> if (!r.isSuccessful) return@runCatching Check.Failed; JSONObject(r.body!!.string()) }
             val version = json.optString("tag_name").removePrefix("v")
-            if (version.isBlank() || !isNewer(version, BuildConfig.VERSION_NAME)) return@runCatching null
-            val assets = json.optJSONArray("assets") ?: return@runCatching null
+            if (version.isBlank()) return@runCatching Check.Failed
+            if (!isNewer(version, BuildConfig.VERSION_NAME)) return@runCatching Check.UpToDate
+            val assets = json.optJSONArray("assets") ?: return@runCatching Check.Failed
             val list = (0 until assets.length()).mapNotNull { assets.optJSONObject(it) }
             val apk = list.firstOrNull { it.optString("name") == "droidhand-$version.apk" }
-                ?: list.firstOrNull { it.optString("name").endsWith(".apk") } ?: return@runCatching null
+                ?: list.firstOrNull { it.optString("name").endsWith(".apk") } ?: return@runCatching Check.Failed
             val sums = list.firstOrNull { it.optString("name") == "SHA256SUMS" }?.optString("browser_download_url")
             val sha = sums?.let { url ->
                 runCatching {
@@ -62,8 +72,26 @@ object Updates {
                         ?.firstOrNull { it.size >= 2 && it[1].trimStart('*') == apk.optString("name") }?.get(0)?.lowercase()
                 }.getOrNull()
             }
-            Release(version, apk.optString("browser_download_url"), apk.optString("name"), sha, json.optString("html_url", RELEASES_URL))
-        }.getOrNull()
+            Check.Available(Release(version, apk.optString("browser_download_url"), apk.optString("name"), sha, json.optString("html_url", RELEASES_URL)))
+        }.getOrDefault(Check.Failed)
+    }
+
+    private const val CACHE = "droidhand_update"
+
+    /** The release found by the last check, so the card shows at once when the app opens (before the network answers). */
+    fun cached(ctx: Context): Release? {
+        val sp = ctx.applicationContext.getSharedPreferences(CACHE, Context.MODE_PRIVATE)
+        val v = sp.getString("version", null) ?: return null
+        if (!isNewer(v, BuildConfig.VERSION_NAME)) return null
+        return Release(v, sp.getString("apkUrl", null) ?: return null, sp.getString("apkName", null) ?: return null,
+            sp.getString("sha256", null), sp.getString("pageUrl", null) ?: RELEASES_URL)
+    }
+
+    fun remember(ctx: Context, r: Release?) {
+        val e = ctx.applicationContext.getSharedPreferences(CACHE, Context.MODE_PRIVATE).edit().clear()
+        if (r != null) e.putString("version", r.version).putString("apkUrl", r.apkUrl).putString("apkName", r.apkName)
+            .putString("sha256", r.sha256).putString("pageUrl", r.pageUrl)
+        e.apply()
     }
 
     /** Download the APK into the app cache and check its SHA-256; [progress] gets 0..1. */

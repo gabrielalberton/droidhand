@@ -43,8 +43,17 @@ class Prefs(context: Context) {
 
     /** The agent may unlock the phone with the saved PIN (SecretStore). Default: off. */
     var pinUnlockEnabled: Boolean
-        get() = sp.getBoolean(KEY_PIN_UNLOCK, false)
-        set(v) = sp.edit().putBoolean(KEY_PIN_UNLOCK, v).apply()
+        get() = sp.getBoolean(KEY_PIN_UNLOCK, false) && !sp.getBoolean(KEY_ADB_PIN_ATTEMPT, false)
+        set(v) = sp.edit().putBoolean(KEY_PIN_UNLOCK, v).remove(KEY_ADB_PIN_ATTEMPT).apply()
+
+    /** The ADB fallback requires an acknowledgement separate from the original PIN opt-in. */
+    var adbPinUnlockEnabled: Boolean
+        get() = sp.getBoolean("adb_pin_unlock_accepted", false)
+        set(v) = sp.edit().putBoolean("adb_pin_unlock_accepted", v).apply()
+
+    fun beginAdbPinAttempt(): Boolean = sp.edit().putBoolean(KEY_ADB_PIN_ATTEMPT, true).commit()
+
+    fun finishAdbPinAttempt() { sp.edit().remove(KEY_ADB_PIN_ATTEMPT).apply() }
 
     /** App theme: "system", "light" or "dark". */
     var themeMode: String
@@ -72,6 +81,7 @@ class Prefs(context: Context) {
         const val THEME_DARK = "dark"
         private const val KEY_ASK_MAIN = "ask_main_screen"
         private const val KEY_PIN_UNLOCK = "pin_unlock_enabled"
+        private const val KEY_ADB_PIN_ATTEMPT = "adb_pin_attempt_pending"
         private const val KEY_THEME = "theme_mode"
         private const val KEY_DYNAMIC = "dynamic_color"
         private const val KEY_ACCENT = "accent"

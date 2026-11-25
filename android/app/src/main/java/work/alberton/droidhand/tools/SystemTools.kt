@@ -13,6 +13,7 @@ import org.json.JSONObject
 import work.alberton.droidhand.data.SecretStore
 import work.alberton.droidhand.suggestions.SuggestionStore
 import work.alberton.droidhand.unlock.Unlocker
+import work.alberton.droidhand.unlock.AdbPinUnlock
 
 /** Device info, lock state and unlock, apps list, settings, kill switch and the suggestion log. */
 class SystemTools(context: Context) : ToolGroup {
@@ -36,6 +37,7 @@ class SystemTools(context: Context) : ToolGroup {
             ToolResult.ok(r)
         }
         "get_lock_state" -> ToolResult.ok(lockState(ctx))
+        "adb_pin_unlock_prepare" -> ToolResult.ok(AdbPinUnlock.prepare(ctx.app))
         "get_device_info" -> ToolResult.ok(deviceInfo(ctx))
         "list_apps" -> ToolResult.ok(JSONObject().put("apps", launchableApps(ctx.app)))
         "get_setting" -> {
@@ -77,6 +79,7 @@ class SystemTools(context: Context) : ToolGroup {
             .put("locked", km?.isKeyguardLocked == true)
             .put("secureLock", km?.isDeviceSecure == true)
             .put("pinUnlockAvailable", ctx.prefs.pinUnlockEnabled && SecretStore(ctx.app).hasPin)
+            .put("adbPinUnlockAvailable", AdbPinUnlock.available(ctx.app))
     }
 
     private fun launchableApps(app: Context): JSONArray {

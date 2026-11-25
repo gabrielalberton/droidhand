@@ -17,6 +17,9 @@ data class Live(
     val bgMode: BackgroundSession.Mode? = null,
     val bgDisplay: Int = -1,
     val helper: Boolean = false,
+    /** USB debugging is on right now, and until when (0 = no session of ours, e.g. turned on by hand). */
+    val adbOn: Boolean = false,
+    val adbDeadline: Long = 0L,
 )
 
 /** UI-side copy of the settings, so changes recompose immediately. */
