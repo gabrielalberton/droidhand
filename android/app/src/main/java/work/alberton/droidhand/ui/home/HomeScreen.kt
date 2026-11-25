@@ -55,7 +55,7 @@ fun HomeScreen(
         UpdateCard(updates)
 
         SectionLabel(stringResource(R.string.section_quick))
-        QuickControls(live, refresh, onPair = { onOpen(Route.PAIR_ADB) })
+        QuickControls(live, refresh, onPair = { onOpen(Route.PAIR_ADB) }, onOpenPrivacy = { onOpen(Route.PRIVACY) })
 
         val p = live.perms
         SectionLabel(

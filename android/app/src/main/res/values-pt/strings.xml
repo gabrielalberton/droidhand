@@ -273,4 +273,13 @@
     <string name="update_found">Versão %1$s disponível</string>
     <string name="update_none">Você está na versão mais recente (%1$s)</string>
     <string name="update_check_failed">Não deu para verificar. Tente de novo daqui a pouco.</string>
+    <string name="bank_title">Parecer instalado pela Play Store</string>
+    <string name="bank_status_off">Desligado. Alguns apps de banco podem recusar funcionar com a acessibilidade ligada.</string>
+    <string name="bank_status_active">Ligado: o Android registra a Play Store como instalador.</string>
+    <string name="bank_status_pending">Ligado, aguardando: aplica quando o computador estiver conectado.</string>
+    <string name="bank_status_working">Aplicando… o app reinicia sozinho.</string>
+    <string name="bank_status_failed">Não deu certo: %1$s</string>
+    <string name="bank_warning_title">Aviso</string>
+    <string name="bank_warning">Esta opção faz o Android informar que o DroidHand foi instalado pela Play Store, embora tenha vindo de outro lugar. Apps de banco usam essa informação para decidir se confiam em um serviço de acessibilidade; com ela ligada, essa proteção deixa de funcionar contra o DroidHand. Ligue só se você confia neste app e no computador que o controla. Para aplicar, o computador liga a depuração USB por alguns segundos e reinstala o app no mesmo lugar (dados e permissões ficam). Dá para desligar a qualquer momento; o registro atual só volta ao normal na próxima atualização.</string>
+    <string name="bank_apply_now">Aplicar agora</string>
 </resources>

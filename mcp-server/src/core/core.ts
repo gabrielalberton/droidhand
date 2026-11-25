@@ -9,6 +9,7 @@ import { Audit, redact } from "./audit.js";
 import { SuggestionStore, isSuggestionCategory } from "./suggestions.js";
 import { run, runPinUnlock, startShellHelper, stopShellHelper } from "./adb.js";
 import { AdbSessions } from "./adbSession.js";
+import { ensurePlayInstaller, type InstallerResult } from "./installer.js";
 import { pairAndSetUp, validatePair, type PairResult } from "./adbPair.js";
 import { SetupLinks } from "./setupLinks.js";
 import { appLink, pickLang, renderGonePage, renderSetupPage } from "../relay/setupPage.js";
@@ -70,6 +71,7 @@ export class Core {
   private reverseTimer: NodeJS.Timeout | undefined;
   /** Phones with an ADB pairing in progress (one at a time each). */
   private readonly pairing = new Set<string>();
+  private readonly fixingInstaller = new Set<string>();
 
   constructor(cfg: Config) {
     this.cfg = cfg;
@@ -276,6 +278,7 @@ export class Core {
   private async onPhoneRequest(device: string, op: string, args: Record<string, unknown> = {}): Promise<unknown> {
     if (op === "add_device") return this.addDeviceFromPhone(device, args);
     if (op === "adb_pair") return this.pairFromPhone(device, args);
+    if (op === "fix_installer") return this.fixInstallerFromPhone(device);
     if (op !== "relay_status") throw new Error(`unsupported request '${op}'`);
     const phone = this.phones.get(device);
     if (phone?.cfg.role !== "admin") throw new Error("not_admin: only admin phones can see the relay status");
@@ -331,6 +334,38 @@ export class Core {
     } finally {
       this.pairing.delete(device);
     }
+  }
+
+  /**
+   * The phone asks to have the Play Store recorded as DroidHand's installer ("compatibility with
+   * banking apps", on by default in the app). Opens an ADB session if none is open, reinstalls the
+   * APK in place when needed and closes the session again once the app is back.
+   */
+  private async fixInstallerFromPhone(device: string): Promise<InstallerResult> {
+    const phone = this.phones.get(device);
+    if (!phone) throw new Error("unknown device");
+    if (this.fixingInstaller.has(device)) throw new Error("busy: an installer fix is already running for this phone");
+    this.fixingInstaller.add(device);
+    const hadSession = phone.adb.active;
+    try {
+      if (!hadSession) await phone.adb.begin();
+      const r = await ensurePlayInstaller(this.cfg.adbPath, await phone.adb.ready());
+      this.audit.record({ kind: "safety", device, tool: "fix_installer", ok: true, args: { reinstalled: r.reinstalled, installer: r.installer } });
+      if (r.reinstalled) await this.waitConnected(device, 45_000);
+      return r;
+    } catch (err) {
+      this.audit.record({ kind: "safety", device, tool: "fix_installer", ok: false, error: errorMessage(err) });
+      throw err;
+    } finally {
+      this.fixingInstaller.delete(device);
+      if (!hadSession) await phone.adb.end("installer_fixed");
+    }
+  }
+
+  /** Waits (bounded) for a phone to be connected again, e.g. after its app was reinstalled. */
+  private async waitConnected(device: string, ms: number): Promise<void> {
+    const until = Date.now() + ms;
+    while (Date.now() < until && !this.relay.isConnected(device)) await new Promise((r) => setTimeout(r, 500));
   }
 
   /**

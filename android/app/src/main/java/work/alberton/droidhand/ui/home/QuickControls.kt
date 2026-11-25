@@ -13,6 +13,7 @@ import work.alberton.droidhand.a11y.A11yToggle
 import work.alberton.droidhand.adb.AdbSession
 import work.alberton.droidhand.ui.Live
 import work.alberton.droidhand.ui.components.Card
+import work.alberton.droidhand.ui.components.Chevron
 import work.alberton.droidhand.ui.components.RowDivider
 import work.alberton.droidhand.ui.components.SettingRow
 import java.util.Date
@@ -23,8 +24,10 @@ import java.util.Date
  * (accessibility) or the pairing screen (ADB). Debugging started here closes by itself after 10 minutes.
  */
 @Composable
-internal fun QuickControls(live: Live, refresh: () -> Unit, onPair: () -> Unit) {
+internal fun QuickControls(live: Live, refresh: () -> Unit, onPair: () -> Unit, onOpenPrivacy: () -> Unit) {
     val ctx = LocalContext.current
+    val prefs = androidx.compose.runtime.remember { work.alberton.droidhand.data.Prefs(ctx) }
+    val bank = work.alberton.droidhand.ui.settings.rememberInstallerStatus(prefs)
     Card {
         SettingRow(
             R.drawable.ic_accessibility, stringResource(R.string.quick_a11y),
@@ -57,5 +60,8 @@ internal fun QuickControls(live: Live, refresh: () -> Unit, onPair: () -> Unit) 
                 }
             })
         }
+        RowDivider()
+        SettingRow(R.drawable.ic_shield, stringResource(R.string.bank_title), work.alberton.droidhand.ui.settings.installerStatusText(bank),
+            onClick = onOpenPrivacy) { Chevron() }
     }
 }

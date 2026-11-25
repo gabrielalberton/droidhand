@@ -1,0 +1,3 @@
+<resources>
+    <string name="lab_desc">Serviço de teste do DroidHand Lab: não lê nem altera nada. Serve só para descobrir como apps de banco reagem a serviços de acessibilidade.</string>
+</resources>

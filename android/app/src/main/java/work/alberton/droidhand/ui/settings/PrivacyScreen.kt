@@ -26,6 +26,7 @@ fun PrivacyScreen(prefs: Prefs, onBack: () -> Unit) {
     var suggestions by remember { mutableStateOf(prefs.suggestionLogging) }
     var ask by remember { mutableStateOf(prefs.askMainScreen) }
     Page(stringResource(R.string.nav_privacy), onBack) {
+        BankCompatSection(prefs)
         Card {
             SettingRow(R.drawable.ic_window, stringResource(R.string.priv_ask_main), stringResource(R.string.priv_ask_main_desc),
                 onClick = { ask = !ask; prefs.askMainScreen = ask }) {

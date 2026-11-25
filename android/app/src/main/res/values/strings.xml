@@ -280,4 +280,13 @@
     <string name="update_found">Version %1$s is out</string>
     <string name="update_none">You are on the latest version (%1$s)</string>
     <string name="update_check_failed">Could not check for updates. Try again in a moment.</string>
+    <string name="bank_title">Look like a Play Store install</string>
+    <string name="bank_status_off">Off. Some banking apps may refuse to work while accessibility is on.</string>
+    <string name="bank_status_active">On: Android records the Play Store as the installer.</string>
+    <string name="bank_status_pending">On, waiting: applied when the computer is connected.</string>
+    <string name="bank_status_working">Applying… the app restarts by itself.</string>
+    <string name="bank_status_failed">Did not work: %1$s</string>
+    <string name="bank_warning_title">Warning</string>
+    <string name="bank_warning">This makes Android report that DroidHand was installed by the Play Store, although it came from somewhere else. Banking apps use that to decide whether to trust an accessibility service, so with this on that protection no longer works against DroidHand. Turn it on only if you trust this app and the computer that controls it. To apply it, the computer turns USB debugging on for a few seconds and reinstalls the app in place (data and permissions stay). You can turn it off at any time; the current record only goes back to normal on the next update.</string>
+    <string name="bank_apply_now">Apply now</string>
 </resources>

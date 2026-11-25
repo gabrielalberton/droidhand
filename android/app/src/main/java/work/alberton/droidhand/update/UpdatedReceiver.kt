@@ -16,6 +16,9 @@ import android.provider.Settings
 class UpdatedReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
+        // Back online after an update even without the accessibility service: the relay can then put the installer record back.
+        val prefs = work.alberton.droidhand.data.Prefs(ctx)
+        if (prefs.serviceEnabled && prefs.relayUrl.isNotBlank()) runCatching { work.alberton.droidhand.service.RelayService.start(ctx) }
         if (ctx.checkSelfPermission("android.permission.WRITE_SECURE_SETTINGS") != PackageManager.PERMISSION_GRANTED) return
         val cr = ctx.contentResolver
         val key = Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES

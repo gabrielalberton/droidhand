@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-25
+
+### App (Android)
+- **Look like a Play Store install** (Privacy & safety; **on by default**, with a warning): Nubank (and apps like it) block the phone as soon as an accessibility service from an app **not installed by the Play Store** is on, whatever its capabilities. Tested on a Galaxy S24 with a lab APK: a service with no capabilities at all was blocked; the same service with the Play Store recorded as installer opened fine, and so did the full DroidHand service. The app now asks the relay to reinstall it in place with `com.android.vending` as installer (`adb install -r -i`; data and permissions stay, USB debugging is on only for those seconds) at start and after every update, which would otherwise reset it. This makes Android report a different installer than the real one and weakens the banks' own protection against this app; the warning says so, and the option can be turned off.
+- The home screen shows the option's state under **Quick controls**.
+- The app comes back online by itself after an update (the relay service restarts from the update broadcast).
+
+### Relay
+- New phone request `fix_installer` (reinstalls the APK already on the phone with the Play Store as installer; opens and closes its own ADB session). `deploy/install-phone.sh` installs with `-i com.android.vending` by default (`DROIDHAND_INSTALLER=` to opt out).
+
 ## [1.2.5] - 2026-11-25
 
 ### App (Android)

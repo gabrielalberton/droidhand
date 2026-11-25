@@ -4,6 +4,10 @@
 # updated, so this script re-enables it every time, appending to (never replacing)
 # the services already enabled.
 # Usage: deploy/install-phone.sh [adb-serial] [apk]
+# The app is installed with the Play Store recorded as its installer (-i com.android.vending): banking
+# apps refuse a sideloaded accessibility service but accept one from the Play Store (see CHANGELOG
+# 1.3.0 and the "Look like a Play Store install" option in the app). This makes Android report a
+# different installer than the real one; set DROIDHAND_INSTALLER= (empty) to install normally.
 # Optional: RELAY_URL=ws://<computer-tailnet-ip>:8787 also configures the app
 # (address + token from DROIDHAND_TOKEN_FILE, default ~/.config/droidhand/token)
 # and turns the agent service on, without touching the phone's screen.
@@ -18,7 +22,8 @@ PKG=work.alberton.droidhand
 SVC="$PKG/$PKG.a11y.DroidHandAccessibilityService"
 A=("$ADB"); [[ -n "$SERIAL" ]] && A+=(-s "$SERIAL")
 
-"${A[@]}" install -r "$APK"
+INSTALLER="${DROIDHAND_INSTALLER-com.android.vending}"
+"${A[@]}" install -r ${INSTALLER:+-i "$INSTALLER"} "$APK"
 "${A[@]}" shell pm grant "$PKG" android.permission.WRITE_SECURE_SETTINGS
 "${A[@]}" shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS || true
 if [[ -n "${RELAY_URL:-}" ]]; then

@@ -55,6 +55,26 @@ class Prefs(context: Context) {
 
     fun finishAdbPinAttempt() { sp.edit().remove(KEY_ADB_PIN_ATTEMPT).apply() }
 
+    /**
+     * Compatibility with banking apps: keep the Play Store recorded as this app's installer (see
+     * InstallerCompat). Default: ON, with a plain warning in Privacy & safety.
+     */
+    var playInstaller: Boolean
+        get() = sp.getBoolean("play_installer", true)
+        set(v) = sp.edit().putBoolean("play_installer", v).apply()
+
+    /** When the app last asked the relay to fix the installer, and how many tries in a row (a try that sticks resets it). */
+    var installerFixAt: Long
+        get() = sp.getLong("installer_fix_at", 0L)
+        set(v) = sp.edit().putLong("installer_fix_at", v).apply()
+    var installerFixTries: Int
+        get() = sp.getInt("installer_fix_tries", 0)
+        set(v) = sp.edit().putInt("installer_fix_tries", v).apply()
+
+    fun noteInstallerFix(@Suppress("UNUSED_PARAMETER") version: String) {
+        sp.edit().putLong("installer_fix_at", System.currentTimeMillis()).putInt("installer_fix_tries", installerFixTries + 1).commit()
+    }
+
     /** App theme: "system", "light" or "dark". */
     var themeMode: String
         get() = sp.getString(KEY_THEME, THEME_SYSTEM) ?: THEME_SYSTEM

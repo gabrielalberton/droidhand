@@ -127,7 +127,9 @@ class RelayClient(context: Context) {
             }
             if (frame.optString("type") == "event" && frame.optString("event") == "welcome") {
                 _deviceId.value = frame.optJSONObject("payload")?.optString("device")?.ifBlank { null }
-                _state.value = State.CONNECTED; return
+                _state.value = State.CONNECTED
+                work.alberton.droidhand.compat.InstallerCompat.maybeFix(app, this@RelayClient)
+                return
             }
             if (frame.optString("type") == "res") {
                 requests.remove(frame.optString("id"))?.invoke(frame); return
